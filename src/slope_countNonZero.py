@@ -72,7 +72,7 @@ def draw_rectangle(img, lpos, rpos, offset=0):
                        (325, 25 + offset),
                        (0, 0, 255), 2)
     
-    cv2.line(img, (lpos, 15+offset), (rpos, 15+offset), (125,125,125), 2)
+    #cv2.line(img, (lpos, 15+offset), (rpos, 15+offset), (125,125,125), 2)
 
     return img
 
@@ -243,13 +243,13 @@ def detect_slope(cal_image, low_threshold_value):
     #stopline_roi, _, _ = set_roi(cal_image, x_len, 300, y_w)
     cv2.imshow("slope_roi",slope_roi)
 #set_roi(cal_image, 250, 350, 10)
-  
+
     #cv2.imshow("roi", stopline_roi)
     image = image_processing(slope_roi, low_threshold_value)
-    cv2.imshow("HLS", image)
+    cv2.imshow("HSV", image)
     #검은색 x부분
-    print(cv2.countNonZero(image), 80 * (410-230) * 0.9)
-    if cv2.countNonZero(image) > 80 * (410-230) * 0.9 :
+    print(cv2.countNonZero(image), 100 * (410-230) * 0.5)
+    if cv2.countNonZero(image) > 100 * (410-230) * 0.5 :
         #image = cv2.rectangle(image,(lpos,300),(rpos,300+offset_y),(0,255,0),2)
         #cv2.imshow("check",image)
         print("slope")
@@ -273,14 +273,13 @@ def set_roi(frame, x_len, start_y, offset_y):
 
 def image_processing(image, low_threshold_value):
     blur = cv2.GaussianBlur(image, (5, 5), 0)
-    #_, _, B = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2LAB))
-    _, L, _ = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2HLS))
+    _, A, _ = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2LAB))
+    #_, _, V = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2HSV))
     #_, L, _ = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2HLS))
     #_, lane = cv2.threshold(L, low_threshold_value, 255, cv2.THRESH_BINARY)
-    _, lane = cv2.threshold(L, 200, 255, cv2.THRESH_BINARY_INV)
+    _, lane = cv2.threshold(A, low_threshold_value, 255, cv2.THRESH_BINARY)
     #cv2.imshow("L", lane)
     return lane
-
 
 
 def calibrate_image(frame, mtx, dist, cal_mtx, cal_roi):
@@ -312,7 +311,7 @@ dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
 #np.array([-0.289296, 0.061035, 0.001786, 0.015238, 0.0])
 
 cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, (Width, Height))
-rospy.init_node("stopline")
+rospy.init_node("slope")
 pub = rospy.Publisher("xycar_motor", xycar_motor, queue_size=1)
 motor = xycar_motor()
 #while cap.isOpened():
@@ -328,7 +327,7 @@ while True:
     #detect_stopline(cal_image, 125)
 
     speed = detect_slope(cal_image, 125)
-    motor.speed = 0
+    motor.speed = speed
     motor.angle = 0 #기본 유지
 
     pub.publish(motor)
