@@ -6,6 +6,8 @@ import numpy as np
 Offset = 360
 Gap = 40
 detect_line = False
+dir_count = -1
+lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 def to_calibrated(img):
     tf_image = cv2.undistort(img, mtx, dist, None, cal_mtx)
@@ -69,15 +71,15 @@ def divide_left_right(lines):
 
         x1, y1, x2, y2 = Line
         x_m = (x1 + x2)/2
-	if (slope < 0) and (x2 < Width/2 - 90):
+	if (slope < 0) and (x2 < Width/2 - 30):
             if detect_line :
-                if (l_avg - 30 < x_m) and (x_m < l_avg + 30):
+                if (l_avg - 20 < x_m) and (x_m < l_avg + 20):
             	  left_lines.append([Line.tolist()])
             else :
                 left_lines.append([Line.tolist()])
-        elif (slope > 0) and (x1 > Width/2 + 90):
+        elif (slope > 0) and (x1 > Width/2 + 30):
             if detect_line :
-                if (r_avg - 30 < x_m) and (x_m < r_avg + 30):
+                if (r_avg - 20 < x_m) and (x_m < r_avg + 20):
             	  right_lines.append([Line.tolist()])
             else :
                 right_lines.append([Line.tolist()])
@@ -139,12 +141,13 @@ def get_line_pos(lines, left=False, right=False):
         x2 = ((Height/2) - b) / float(m)
     return x1, x2, int(pos), x_avg, True
 
+
 # show image and return lpos, rpos
 def process_image(frame):
     global Width
     global Offset, Gap
     global lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l, detect_line
-
+    global fail_count, dir_count, dir_order
     # gray
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
@@ -172,19 +175,36 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    print('top, bottop  : ', rx1-lx2, rx2-lx1)
-    if not l_detect and not r_detect :
-	print('fail detecting line!')
-	detect_line = False
-    elif not l_detect :
-        lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-    elif not r_detect :
-	rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-    else :
-        detect_line = True
     top_l = rx1-lx2
     bottom_l = rx2-lx1
-    print('road width : ', rpos - lpos)
+    if not l_detect and not r_detect :
+	fail_count += 1
+	if fail_count == 3 :
+	    print('##########fail detecting line! :', fail_count, '##########')
+	    dir_count = (dir_count + 1) % 4 
+	    print('dir count : ', dir_count)
+	detect_line = False
+    else :
+        if not l_detect :
+            lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+	    lpos = rpos-440
+        elif not r_detect :
+	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
+	    rpos = lpos+440
+        else :   
+            lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+	    lpos = rpos-400
+	    
+	    '''
+	    if rpos - lpos < 350 :
+	        print("@@@@@@@@looking right lane@@@@@@@@@")
+		lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+		lpos = rpos-400
+            '''
+            detect_line = True
+	fail_count = 0
+    
+    #print('road width : ', rpos - lpos)
     
     frame = cv2.line(frame, (int(lx1), Height), (int(lx2), (Height/2)), (255, 0,0), 3)
     frame = cv2.line(frame, (int(rx1), Height), (int(rx2), (Height/2)), (255, 0,0), 3)
@@ -199,7 +219,7 @@ def process_image(frame):
 
     return (lpos, rpos), frame
 
-cap = cv2.VideoCapture("track.mkv")
+cap = cv2.VideoCapture("test.mkv")
 
 Width, Height = 640, 480
 mtx = np.array([[ 364.14123,    0.     ,  325.19317],
@@ -213,8 +233,12 @@ while cap.isOpened():
     ret, frame = cap.read()
     cal_image = to_calibrated(frame)
     pose, hough = process_image(cal_image)
-    center = pose[0] + pose[1]
+    center = (pose[0] + pose[1])/2
     cte = center - 320
+    if fail_count > 2 :
+        print('right')
+    else :
+        pass #print(cte*0.4)
     cv2.imshow("hough", hough)
-    time.sleep(0.2)
+    time.sleep(0.025)
     cv2.waitKey(1)
