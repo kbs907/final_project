@@ -22,7 +22,7 @@ class YoloModule:
             for i in boxdata.bounding_boxes:
                 if i.Class == "car":
                     return (i.xmax - i.xmin)
-                
+    '''         
     def get_person_x_position(self):
         if self.boxdata is not None:
             for i in boxdata.bounding_boxes:
@@ -38,3 +38,12 @@ class YoloModule:
                     return ["dog", i.xmin, i.xmax]
                 if i.Class == "cow":
                     return ["cow", i.xmin, i.xmax]
+    '''
+    def get_mission(self, class_name):
+      if self.boxdata is not None:
+          for i in self.boxdata.bounding_boxes:
+              if i.Class == class_name :
+                  print(class_name, i.xmin, i.xmax)
+                  return [class_name, i.xmin, i.xmax]
+                    
+     #def yolo_drive(self, 
