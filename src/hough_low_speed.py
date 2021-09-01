@@ -2,9 +2,9 @@
 
 import cv2, math, random, time
 import numpy as np
-import rospy, rospkg
+import rospy
 from cv_bridge import CvBridge
-from xycar_motor.msg import xycar_motor
+from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 
 
@@ -13,6 +13,19 @@ Offset = 360
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
+lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0,0,0,0,0,0,0,0,0,0
+dir_count = -1
+dir_order = ['right','right','right','left']
+fail_count = 0
+
+def drive(Angle, Speed): 
+    global pub
+    
+    msg = xycar_motor()
+    msg.angle = Angle
+    msg.speed = Speed
+
+    pub.publish(msg)
 
 def img_callback(data):
     global image    
@@ -80,13 +93,13 @@ def divide_left_right(lines):
 
         x1, y1, x2, y2 = Line
         x_m = (x1 + x2)/2
-	if (slope < 0) and (x2 < Width/2 - 90):
+	if (slope < 0) and (x2 < Width/2 - 30):
             if detect_line :
                 if (l_avg - 30 < x_m) and (x_m < l_avg + 30):
             	  left_lines.append([Line.tolist()])
             else :
                 left_lines.append([Line.tolist()])
-        elif (slope > 0) and (x1 > Width/2 + 90):
+        elif (slope > 0) and (x1 > Width/2 + 30):
             if detect_line :
                 if (r_avg - 30 < x_m) and (x_m < r_avg + 30):
             	  right_lines.append([Line.tolist()])
@@ -155,7 +168,7 @@ def process_image(frame):
     global Width
     global Offset, Gap
     global lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l, detect_line
-
+    global dir_count, dir_order, fail_count
     # gray
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
@@ -183,19 +196,30 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    print('top, bottop  : ', rx1-lx2, rx2-lx1)
-    if not l_detect and not r_detect :
-	print('fail detecting line!')
-	detect_line = False
-    elif not l_detect :
-        lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-    elif not r_detect :
-	rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-    else :
-        detect_line = True
+    
     top_l = rx1-lx2
     bottom_l = rx2-lx1
-    print('road width : ', rpos - lpos)
+    #print('top, bottop  : ', rx1-lx2, rx2-lx1)
+    if not l_detect and not r_detect :
+	fail_count += 1
+	if fail_count == 3 :
+	    print('##########fail detecting line! :', fail_count, '##########')
+	    dir_count = (dir_count + 1) % 4 
+	detect_line = False
+    else :
+        if not l_detect :
+            lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+	    lpos = rpos-440
+        elif not r_detect :
+	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
+	    rpos = lpos+440
+        else :   
+            lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+	    lpos = rpos-400
+            detect_line = True
+	fail_count = 0
+    
+    #print('road width : ', rpos - lpos)
     
     frame = cv2.line(frame, (int(lx1), Height), (int(lx2), (Height/2)), (255, 0,0), 3)
     frame = cv2.line(frame, (int(rx1), Height), (int(rx2), (Height/2)), (255, 0,0), 3)
@@ -223,6 +247,7 @@ cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, 
 rospy.init_node('hough_drive')
 pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
 rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
+rate = rospy.Rate(20)
 
 while not image.size == (640*480*3):
         continue
@@ -231,8 +256,13 @@ while not rospy.is_shutdown():
     global image
     cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
-    center = pose[0] + pose[1]
+    center = (pose[0] + pose[1])/2
     cte = center - 320
+    #print(cte*0.4)
+    if fail_count >2 :
+            drive(50, 20)
+    else :
+        drive(cte*0.4,15)
     cv2.imshow("hough", hough)
-    time.sleep(0.2)
+    rate.sleep()
     cv2.waitKey(1)
