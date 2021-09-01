@@ -2,10 +2,79 @@
 
 import cv2, math, random, time
 import numpy as np
+import rospy
+from cv_bridge import CvBridge
+from xycar_msgs.msg import xycar_motor
+from sensor_msgs.msg import Image
 
+
+bridge = CvBridge()
 Offset = 360
 Gap = 40
 detect_line = False
+image = np.empty(shape=[0])
+lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0,0,0,0,0,0,0,0,0,0
+dir_count = -1
+dir_order = ['right','right','right','left']
+fail_count = 0
+
+def detect_stopline(cal_image, pos):
+    global Offset, Gap
+    #offset_y = 30
+    #print(pos[1], pos[0])
+    lpos = max(pos[0], 0)
+    rpos = min(pos[1], 460)
+    x_len = rpos - lpos
+    stopline_roi = cal_image[360:390, lpos :rpos]
+    #cv2.imshow("stopline_roi",stopline_roi)
+    stopline_image = stopline_image_processing(stopline_roi)
+    #cv2.imshow("HLS", stopline_image)
+    #print(cv2.countNonZero(stopline_image), x_len * Gap * 0.2)
+    if cv2.countNonZero(stopline_image) > x_len * Gap * 0.2 :
+        print("stopline")
+	return True
+ 
+    return False
+
+
+def stopline_image_processing(image):
+    blur = cv2.GaussianBlur(image, (5, 5), 0)
+    _, L, _ = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2HLS))
+    _, lane = cv2.threshold(L, 125, 255, cv2.THRESH_BINARY_INV)
+    #cv2.imshow("L", lane)
+    return lane
+
+
+def detect_slope(cal_image, pos):
+    center = (pos[0] + pos[1]) / 2
+    slope_roi = cal_image[230 : 410, center-50:center+50]
+    #cv2.imshow("slope_roi",slope_roi)
+    slope_image = slope_image_processing(slope_roi)
+    cv2.imshow("HSV", slope_image)
+    #print(cv2.countNonZero(image), 100 * (410-230) * 0.5)
+    if cv2.countNonZero(slope_image) > 100 * (410-230) * 0.5 :
+        print("slope")
+   	return True
+    return False
+
+def slope_image_processing(image):
+    blur = cv2.GaussianBlur(image, (5, 5), 0)
+    _, A, _ = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2LAB))
+    _, slope_roi_bin = cv2.threshold(A, 125, 255, cv2.THRESH_BINARY)
+    return slope_roi_bin
+
+def drive(Angle, Speed): 
+    global pub
+    
+    msg = xycar_motor()
+    msg.angle = Angle
+    msg.speed = Speed
+
+    pub.publish(msg)
+
+def img_callback(data):
+    global image    
+    image = bridge.imgmsg_to_cv2(data, "bgr8")
 
 def to_calibrated(img):
     tf_image = cv2.undistort(img, mtx, dist, None, cal_mtx)
@@ -69,16 +138,16 @@ def divide_left_right(lines):
 
         x1, y1, x2, y2 = Line
         x_m = (x1 + x2)/2
-	if (slope < 0) and (x2 < Width/2 - 90):
+	if (slope < 0) and (x2 < Width/2 - 30):
             if detect_line :
                 if (l_avg - 30 < x_m) and (x_m < l_avg + 30):
-            	  left_lines.append([Line.tolist()])
+            	      left_lines.append([Line.tolist()])
             else :
                 left_lines.append([Line.tolist()])
-        elif (slope > 0) and (x1 > Width/2 + 90):
+        elif (slope > 0) and (x1 > Width/2 + 30):
             if detect_line :
                 if (r_avg - 30 < x_m) and (x_m < r_avg + 30):
-            	  right_lines.append([Line.tolist()])
+            	      right_lines.append([Line.tolist()])
             else :
                 right_lines.append([Line.tolist()])
 	
@@ -144,7 +213,7 @@ def process_image(frame):
     global Width
     global Offset, Gap
     global lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l, detect_line
-
+    global dir_count, dir_order, fail_count
     # gray
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
@@ -156,7 +225,7 @@ def process_image(frame):
     low_threshold = 50
     high_threshold = 150
     edge_img = cv2.Canny(np.uint8(blur_gray), low_threshold, high_threshold)
-    cv2.imshow("canny", edge_img)
+    #cv2.imshow("canny", edge_img)
 
     # HoughLinesP (cv2.HoughLinesP(image, rho, theta, threshold, minLineLength, maxLineGap)
     roi = edge_img[Offset : Offset+Gap, 0 : Width]
@@ -172,19 +241,30 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    print('top, bottop  : ', rx1-lx2, rx2-lx1)
-    if not l_detect and not r_detect :
-	print('fail detecting line!')
-	detect_line = False
-    elif not l_detect :
-        lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-    elif not r_detect :
-	rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-    else :
-        detect_line = True
+    
     top_l = rx1-lx2
     bottom_l = rx2-lx1
-    print('road width : ', rpos - lpos)
+    #print('top, bottop  : ', rx1-lx2, rx2-lx1)
+    if not l_detect and not r_detect :
+	fail_count += 1
+	if fail_count == 3 :
+	    print('##########fail detecting line! :', fail_count, '##########')
+	    dir_count = (dir_count + 1) % 4 
+	detect_line = False
+    else :
+        if not l_detect :
+            lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+	    lpos = rpos-440
+        elif not r_detect :
+	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
+	    rpos = lpos+440
+        else :   
+            lx1, lx2 = rx2 - bottom_l, rx1 - top_l
+	    lpos = rpos-400
+            detect_line = True
+	fail_count = 0
+    
+    #print('road width : ', rpos - lpos)
     
     frame = cv2.line(frame, (int(lx1), Height), (int(lx2), (Height/2)), (255, 0,0), 3)
     frame = cv2.line(frame, (int(rx1), Height), (int(rx2), (Height/2)), (255, 0,0), 3)
@@ -199,7 +279,7 @@ def process_image(frame):
 
     return (lpos, rpos), frame
 
-cap = cv2.VideoCapture("track.mkv")
+#cap = cv2.VideoCapture("track.mkv")
 
 Width, Height = 640, 480
 mtx = np.array([[ 364.14123,    0.     ,  325.19317],
@@ -209,12 +289,47 @@ dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
 
 cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, (Width, Height)) 
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    cal_image = to_calibrated(frame)
+rospy.init_node('hough_drive')
+pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
+rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
+rate = rospy.Rate(20)
+
+while not image.size == (640*480*3):
+    continue
+
+while not rospy.is_shutdown():
+    #global image
+    cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
-    center = pose[0] + pose[1]
+    center = (pose[0] + pose[1])/2
     cte = center - 320
+    #print(cte*0.4)
+    if fail_count >2 :
+        #if dir_order[dir_count] == 'right' :
+            drive(50,20) #drive(50, 20)
+        #else :
+         #   drive(-40,15)
+    else :
+	
+        if detect_stopline(cal_image, pose) :	
+		print('stopline!')
+		for _ in range(60):
+			drive(0,0)
+			rate.sleep()
+		#for _ in range(10):
+			#drive(0,15)
+			#rate.sleep()
+      	'''
+      	if detect_slope(cal_image, pose) :
+      		  print('slope!')
+      		  for _ in range(40):		
+      			    drive(0,0)
+      			    rate.sleep()
+      		  for _ in range(10):
+      			    drive(0,0)
+      			    rate.sleep()
+      	'''
+	drive(cte*0.4, 15) #drive(cte*0.4,15)
     cv2.imshow("hough", hough)
-    time.sleep(0.2)
+    rate.sleep()	
     cv2.waitKey(1)
