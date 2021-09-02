@@ -43,7 +43,11 @@ class YoloModule:
       if self.boxdata is not None:
           for i in self.boxdata.bounding_boxes:
               if i.Class == class_name :
-                  print(class_name, i.xmin, i.xmax)
-                  return [class_name, i.xmin, i.xmax]
-                    
-     #def yolo_drive(self, 
+                  #print(class_name, i.xmin, i.xmax)
+                  yolo_size = i.xmax - i.xmin
+                  #return [class_name, i.xmin, i.xmax]
+                  return yolo_size 
+              else:
+                  return None
+     #def yolo_drive(self, class_name):
+        
