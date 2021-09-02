@@ -7,9 +7,10 @@ from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 
+# mode 3, speed 40, offset 350 : p= 0.3, d= 0.7
 
 bridge = CvBridge()
-Offset = 360
+Offset = 350 #330
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
@@ -252,17 +253,23 @@ rate = rospy.Rate(20)
 while not image.size == (640*480*3):
         continue
 
+p_gain = 0.3#0.25
+d_gain = 0.7#1.7
+prev_cte = 0
 while not rospy.is_shutdown():
     global image
     cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
     center = (pose[0] + pose[1])/2
     cte = center - 320
+    d_term = cte - prev_cte
+    prev_cte = cte
+    steer = p_gain * cte + d_gain * d_term
     #print(cte*0.4)
     if fail_count >2 :
-            drive(50, 20)
+        drive(50, 30)
     else :
-        drive(cte*0.4,15)
+        drive(steer,40)
     cv2.imshow("hough", hough)
     rate.sleep()
     cv2.waitKey(1)
