@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 
 
 bridge = CvBridge()
-Offset = 360
+Offset = 350
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
@@ -22,46 +22,34 @@ def detect_stopline(cal_image, pos):
     global Offset, Gap
     #offset_y = 30
     #print(pos[1], pos[0])
+    #rpos = np.clip(pos[0], 0, 640)
+    #lpos = np.clip(pos[1], 0, rpos)
+    #print(pos)
     lpos = max(pos[0], 0)
-    rpos = min(pos[1], 460)
-    x_len = rpos - lpos
-    stopline_roi = cal_image[360:390, lpos :rpos]
-    #cv2.imshow("stopline_roi",stopline_roi)
-    stopline_image = stopline_image_processing(stopline_roi)
-    #cv2.imshow("HLS", stopline_image)
-    #print(cv2.countNonZero(stopline_image), x_len * Gap * 0.2)
-    if cv2.countNonZero(stopline_image) > x_len * Gap * 0.2 :
-        print("stopline")
-	return True
+    rpos = min(pos[1], 640)
+    #print(rpos, lpos)
+    x_len = rpos - lpos -20
+    if lpos!= 0 and rpos != 0 and x_len > 0:
+        stopline_roi = cal_image[360:390, lpos + 10 :rpos - 10]
+        #cv2.imshow("stopline_roi",stopline_roi)
+        stopline_image = stopline_image_processing(stopline_roi)
+        cv2.imshow("HLS", stopline_image)
+        cNZ = cv2.countNonZero(stopline_image)
+        print(cNZ, x_len * Gap * 0.25,  x_len * Gap * 0.3,  x_len * Gap * 0.4)
+        if cNZ > x_len * Gap * 0.25 :
+            print("stopline")
+	    return True
  
     return False
 
 
-def stopline_image_processing(image):
-    blur = cv2.GaussianBlur(image, (5, 5), 0)
+def stopline_image_processing(stopline_image):
+    blur = cv2.GaussianBlur(stopline_image, (5, 5), 0)
     _, L, _ = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2HLS))
     _, lane = cv2.threshold(L, 125, 255, cv2.THRESH_BINARY_INV)
-    #cv2.imshow("L", lane)
+    #cv2.imshow("L", L)
     return lane
 
-
-def detect_slope(cal_image, pos):
-    center = (pos[0] + pos[1]) / 2
-    slope_roi = cal_image[230 : 410, center-50:center+50]
-    #cv2.imshow("slope_roi",slope_roi)
-    slope_image = slope_image_processing(slope_roi)
-    cv2.imshow("HSV", slope_image)
-    #print(cv2.countNonZero(image), 100 * (410-230) * 0.5)
-    if cv2.countNonZero(slope_image) > 100 * (410-230) * 0.5 :
-        print("slope")
-   	return True
-    return False
-
-def slope_image_processing(image):
-    blur = cv2.GaussianBlur(image, (5, 5), 0)
-    _, A, _ = cv2.split(cv2.cvtColor(blur, cv2.COLOR_BGR2LAB))
-    _, slope_roi_bin = cv2.threshold(A, 125, 255, cv2.THRESH_BINARY)
-    return slope_roi_bin
 
 def drive(Angle, Speed): 
     global pub
@@ -294,23 +282,32 @@ pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
 rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
 rate = rospy.Rate(20)
 
+
 while not image.size == (640*480*3):
     continue
+
+p_gain = 0.3#0.25
+d_gain = 0.7 #0.7#1.7
+prev_cte = 0
 
 while not rospy.is_shutdown():
     #global image
     cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
+    #print(pose)
     center = (pose[0] + pose[1])/2
     cte = center - 320
+    d_term = cte - prev_cte
+    prev_cte = cte
+    steer = p_gain * cte + d_gain * d_term
     #print(cte*0.4)
     if fail_count >2 :
         #if dir_order[dir_count] == 'right' :
-            drive(50,20) #drive(50, 20)
+        drive(50,20) #drive(50, 20)
         #else :
          #   drive(-40,15)
     else :
-	
+        	
         if detect_stopline(cal_image, pose) :	
 		print('stopline!')
 		for _ in range(60):
@@ -329,7 +326,7 @@ while not rospy.is_shutdown():
       			    drive(0,0)
       			    rate.sleep()
       	'''
-	drive(cte*0.4, 15) #drive(cte*0.4,15)
+	drive(steer,20)#drive(cte*0.4, 40)#drive(steer, 40) #drive(cte*0.4,15)
     cv2.imshow("hough", hough)
     rate.sleep()	
     cv2.waitKey(1)
