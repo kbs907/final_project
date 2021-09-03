@@ -6,23 +6,22 @@ import rospy
 from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 from tf.transformations import *
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, Imu
 
 bridge = CvBridge()
-Offset = 360
+Offset = 350
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
 lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0,0,0,0,0,0,0,0,0,0
 dir_count = -1
 dir_order = ['right','right','right','left']
-fail_count = 0
-arData = {"DX":0.0, "DY":0.0, "DZ":0.0, "AX":0.0, "AY":0.0, "AZ":0.0, "AW":0.0}
+fail_count = 3
 roll = 0
 pitch = 0
 yaw = 0
-frame_id = -1
-distance = 99
+front_lidar = 99
+white_count = 9999
 Width, Height = 640, 480
 mtx = np.array([[ 364.14123,    0.     ,  325.19317],
                 [   0.     ,  365.9626 ,  216.14575],
@@ -34,34 +33,41 @@ cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, 
 pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
 
 def drive(Angle, Speed):
-    global pub
-    
+    global pub, white_count
     msg = xycar_motor()
     msg.angle = Angle
     msg.speed = Speed
-
+    if white_count < 7000:
+        for i in range(20):
+            msg.angle = 0
+            msg.speed = 40
+            pub.publish(msg)
+            rospy.sleep(0.1)
+        for i in range(6):
+            msg.angle = -Angle
+            msg.speed = -40
+            pub.publish(msg)
+            rospy.sleep(0.1)
+        return
     pub.publish(msg)
 
 def img_callback(data):
     global image    
     image = bridge.imgmsg_to_cv2(data, "bgr8")
-
-def ar_callback(data):
-    global arData, roll, pitch, yaw, frame_id, distance
-
-    for i in data.markers:
-        frame_id = i.id
-        arData["DX"] = i.pose.pose.position.x
-        arData["DY"] = i.pose.pose.position.y
-        arData["DZ"] = i.pose.pose.position.z
-
-        arData["AX"] = i.pose.pose.orientation.x
-        arData["AY"] = i.pose.pose.orientation.y
-        arData["AZ"] = i.pose.pose.orientation.z
-        arData["AW"] = i.pose.pose.orientation.w
-        distance = math.sqrt(pow(arData["DX"],2) + pow(arData["DZ"],2))
-
-        roll, pitch, yaw = euler_from_quaternion([arData["AX"], arData["AY"], arData["AZ"], arData["AW"]])
+    
+def imu_callback(data):
+    global roll, pitch, yaw
+    print(roll, pitch, yaw)
+    quaternion = [0] * 4
+    quaternion[0] = data.orientation.x
+    quaternion[1] = data.orientation.y
+    quaternion[2] = data.orientation.z
+    quaternion[3] = data.orientation.w
+    roll, pitch, yaw = euler_from_quaternion(quaternion)
+    
+def lidar_callback(data):
+    global front_lidar
+    front_lidar = data.ranges[-5]
 
 def to_calibrated(img):
     tf_image = cv2.undistort(img, mtx, dist, None, cal_mtx)
@@ -200,23 +206,22 @@ def process_image(frame):
     global Width
     global Offset, Gap
     global lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l, detect_line
-    global dir_count, dir_order, fail_count
+    global dir_count, dir_order, fail_count, white_count
     # gray
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
     # blur
     kernel_size = 5
     blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size), 0)
+    #bird_view = birds_eye(blur_gray)
 
     # canny edge
-    low_threshold = 50
+    low_threshold = 80
     high_threshold = 150
     edge_img = cv2.Canny(np.uint8(blur_gray), low_threshold, high_threshold)
-    cv2.imshow("canny", edge_img)
-
-    # HoughLinesP (cv2.HoughLinesP(image, rho, theta, threshold, minLineLength, maxLineGap)
     roi = edge_img[Offset : Offset+Gap, 0 : Width]
-    cv2.imshow('roi', roi)
+    _, baw = cv2.threshold(blur_gray[Offset : Offset+Gap, 0 : Width], 100, 255, cv2.THRESH_BINARY)
+    white_count = (cv2.countNonZero(baw))
     all_lines = cv2.HoughLinesP(roi,1,math.pi/180,30,30,10) # 10, 10 , 50
 
     # divide left, right lines
@@ -265,48 +270,14 @@ def process_image(frame):
     frame = draw_rectangle(frame, lpos, rpos, offset=Offset)
 
     return (lpos, rpos), frame
-    
-def park(angle):
-    global pub
-    for i in range(10):
-        msg = xycar_motor()
-        msg.angle = 0
-        msg.speed = 0
-        pub.publish(msg)
-        rospy.sleep(0.1)
-    for i in range(30):
-        msg = xycar_motor()
-        msg.angle = angle*-150
-        msg.speed = -30
-        pub.publish(msg)
-        rospy.sleep(0.1)
-    for i in range(20):
-        msg = xycar_motor()
-        msg.angle = angle*75
-        msg.speed = -30
-        pub.publish(msg)
-        rospy.sleep(0.1)
-    while True:
-        msg = xycar_motor()
-        msg.angle = 0
-        msg.speed = 0
-        pub.publish(msg)
-        
+   
+prev_cte = 0
+cte = 0
 def start():
-    global image, fail_count, distance, arData, pitch
-    print(arData["DX"], arData["DY"], arData["DZ"])
-    
-    if frame_id == 0:
-        if (distance) < 0.6:
-            for i in range(20):
-                msg = xycar_motor()
-                msg.angle = 40
-                msg.speed = 10
-                pub.publish(msg)
-                rospy.sleep(0.1)
-            park(pitch)
-            print("ar turn")
-            return False
+    global image, fail_count, roll, pitch, yaw, front_lidar, prev_cte, cte
+    p_gain = 0.3
+    d_gain = 0.7
+    #print(front_lidar)
 
     while not image.size == (640*480*3):
         print('not')
@@ -317,13 +288,16 @@ def start():
     pose, hough = process_image(cal_image)
     
     center = (pose[0] + pose[1])/2
+    prev_cte = cte
     cte = center - 320
-
-    if False:
-        drive(50, 10)
-    else:
-        drive(cte*0.4, 10)
-
+    d_term = cte - prev_cte
+    steer = (cte*0.4)
+    if fail_count > 2 :
+        drive(50, 20)
+    else :
+        drive(steer,25)
+    cv2.imshow("hough", hough)
+    cv2.waitKey(1)
     return True
 
     

@@ -230,7 +230,7 @@ def process_image(frame):
 
     cv2.bitwise_not(roi, roi, mask=ROI)
 
-    ret, thresh = cv2.threshold(roi,150,255,cv2.THRESH_BINARY_INV)
+    ret, thresh = cv2.threshold(roi,200,255,cv2.THRESH_BINARY_INV)
     
     #thresh_not = cv2.bitwise_not(thresh)
 
@@ -341,7 +341,7 @@ def start():
         lpos, rpos = process_image(calibrate_image(image))
 
         center = (lpos + rpos) / 2
-        error = -(Width/2 - center - 15)
+        error = -(Width/2 - center)
 
         angle = pid.pid_control(error)
         

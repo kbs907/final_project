@@ -5,8 +5,8 @@ import numpy as np
 import rospy
 from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
+from tf.transformations import *
 from sensor_msgs.msg import Image
-
 
 bridge = CvBridge()
 Offset = 360
@@ -17,8 +17,23 @@ lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0,0,0,0,0,0,0,0,
 dir_count = -1
 dir_order = ['right','right','right','left']
 fail_count = 0
+arData = {"DX":0.0, "DY":0.0, "DZ":0.0, "AX":0.0, "AY":0.0, "AZ":0.0, "AW":0.0}
+roll = 0
+pitch = 0
+yaw = 0
+frame_id = -1
+distance = 99
+Width, Height = 640, 480
+mtx = np.array([[ 364.14123,    0.     ,  325.19317],
+                [   0.     ,  365.9626 ,  216.14575],
+                [   0.     ,    0.     ,    1.     ]])
+dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
 
-def drive(Angle, Speed): 
+cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, (Width, Height)) 
+
+pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
+
+def drive(Angle, Speed):
     global pub
     
     msg = xycar_motor()
@@ -30,6 +45,23 @@ def drive(Angle, Speed):
 def img_callback(data):
     global image    
     image = bridge.imgmsg_to_cv2(data, "bgr8")
+
+def ar_callback(data):
+    global arData, roll, pitch, yaw, frame_id, distance
+
+    for i in data.markers:
+        frame_id = i.id
+        arData["DX"] = i.pose.pose.position.x
+        arData["DY"] = i.pose.pose.position.y
+        arData["DZ"] = i.pose.pose.position.z
+
+        arData["AX"] = i.pose.pose.orientation.x
+        arData["AY"] = i.pose.pose.orientation.y
+        arData["AZ"] = i.pose.pose.orientation.z
+        arData["AW"] = i.pose.pose.orientation.w
+        distance = math.sqrt(pow(arData["DX"],2) + pow(arData["DZ"],2))
+
+        roll, pitch, yaw = euler_from_quaternion([arData["AX"], arData["AY"], arData["AZ"], arData["AW"]])
 
 def to_calibrated(img):
     tf_image = cv2.undistort(img, mtx, dist, None, cal_mtx)
@@ -201,23 +233,23 @@ def process_image(frame):
     bottom_l = rx2-lx1
     #print('top, bottop  : ', rx1-lx2, rx2-lx1)
     if not l_detect and not r_detect :
-	fail_count += 1
-	if fail_count == 3 :
-	    print('##########fail detecting line! :', fail_count, '##########')
-	    dir_count = (dir_count + 1) % 4 
-	detect_line = False
+        fail_count += 1
+        if fail_count == 3 :
+            print('##########fail detecting line! :', fail_count, '##########')
+            dir_count = (dir_count + 1) % 4 
+        detect_line = False
     else :
         if not l_detect :
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-440
+            lpos = rpos-440
         elif not r_detect :
-	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-	    rpos = lpos+440
+            rx1, rx2 = lx2 + top_l , lx1 + bottom_l
+            rpos = lpos+440
         else :   
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-400
+            lpos = rpos-400
             detect_line = True
-	fail_count = 0
+        fail_count = 0
     
     #print('road width : ', rpos - lpos)
     
@@ -233,39 +265,72 @@ def process_image(frame):
     frame = draw_rectangle(frame, lpos, rpos, offset=Offset)
 
     return (lpos, rpos), frame
+    
+def park(angle): 
+    global pub
+    for i in range(10):
+        msg = xycar_motor()
+        msg.angle = 0
+        msg.speed = 0
+        pub.publish(msg)
+        rospy.sleep(0.1)
+    for i in range(30):
+        msg = xycar_motor()
+        msg.angle = angle*-150
+        print(angle)
+        msg.speed = -25
+        pub.publish(msg)
+        rospy.sleep(0.1)
+    for i in range(20):
+        msg = xycar_motor()
+        msg.angle = angle*75
+        msg.speed = -25
+        pub.publish(msg)
+        rospy.sleep(0.1)
+    while True:
+        msg = xycar_motor()
+        msg.angle = 0
+        msg.speed = 0
+        pub.publish(msg)
+        
+def start():
+    global image, fail_count, distance, arData, pitch
+    print(arData["DX"], arData["DY"], arData["DZ"])
+    
+    if frame_id == 0:
+        if (distance) < 0.6:
+            for i in range(17):
+                msg = xycar_motor()
+                msg.angle = 40
+                msg.speed = 10
+                pub.publish(msg)
+                rospy.sleep(0.1)
+            park(pitch)
+            print("ar turn")
+            return False
 
-cap = cv2.VideoCapture("track.mkv")
-
-Width, Height = 640, 480
-mtx = np.array([[ 364.14123,    0.     ,  325.19317],
-                [   0.     ,  365.9626 ,  216.14575],
-                [   0.     ,    0.     ,    1.     ]])
-dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
-
-cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, (Width, Height)) 
-
-rospy.init_node('hough_drive')
-pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
-rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
-rate = rospy.Rate(20)
-
-while not image.size == (640*480*3):
-        continue
-
-while not rospy.is_shutdown():
-    global image
+    while not image.size == (640*480*3):
+        print('not')
+        return True
+    
     cal_image = to_calibrated(image)
+    
     pose, hough = process_image(cal_image)
+    
     center = (pose[0] + pose[1])/2
     cte = center - 320
-    #print(cte*0.4)
-    if fail_count >2 :
-            drive(50, 25)
-    else :
-        drive(cte*0.4,20)
-    cv2.imshow("hough", hough)
-    rate.sleep()
-    cv2.waitKey(1)
+
+    if fail_count > 2:
+        drive(50, 25)
+    else:
+        drive(cte*0.4, 20)
+
+    return True
+
     
-    
-    
+
+
+
+
+
+

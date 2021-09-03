@@ -7,16 +7,17 @@ from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 
+# mode 3, speed 40, offset 350 : p= 0.3, d= 0.7
 
 bridge = CvBridge()
-Offset = 360
+Offset = 350 #330
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
 lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0,0,0,0,0,0,0,0,0,0
 dir_count = -1
 dir_order = ['right','right','right','left']
-fail_count = 0
+fail_count = 3
 
 def drive(Angle, Speed): 
     global pub
@@ -234,8 +235,6 @@ def process_image(frame):
 
     return (lpos, rpos), frame
 
-cap = cv2.VideoCapture("track.mkv")
-
 Width, Height = 640, 480
 mtx = np.array([[ 364.14123,    0.     ,  325.19317],
                 [   0.     ,  365.9626 ,  216.14575],
@@ -252,20 +251,24 @@ rate = rospy.Rate(20)
 while not image.size == (640*480*3):
         continue
 
+p_gain = 0.3#0.25
+d_gain = 0.7#1.7
+prev_cte = 0
 while not rospy.is_shutdown():
     global image
     cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
     center = (pose[0] + pose[1])/2
     cte = center - 320
-    #print(cte*0.4)
+    d_term = cte - prev_cte
+    prev_cte = cte
+    #steer = p_gain * cte + d_gain * d_term
+    steer = (cte*0.4)
     if fail_count >2 :
-            drive(50, 25)
+        drive(50, 20)
     else :
-        drive(cte*0.4,20)
+        drive(steer,25)
     cv2.imshow("hough", hough)
     rate.sleep()
     cv2.waitKey(1)
-    
-    
-    
+
