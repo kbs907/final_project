@@ -28,7 +28,8 @@ def detect_stopline(cal_image, pos):
         stopline_image = stopline_image_processing(stopline_roi)
         cv2.imshow("bin", stopline_image)
         cNZ = cv2.countNonZero(stopline_image)
-        print(cNZ, x_len * Gap * 0.2,  x_len * Gap * 0.3,  x_len * Gap * 0.4)
+        #print(cNZ, x_len * Gap * 0.25,  x_len * Gap * 0.3,  x_len * Gap * 0.4)
+	#print('cnz : ', cNZ, x_len * Gap * 0.2)
         if cNZ > x_len * Gap * 0.2 :
             print("stopline")
 	    return True
@@ -222,7 +223,7 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    
+    print('r-l : ', rpos-lpos)
     top_l = rx1-lx2
     bottom_l = rx2-lx1
     #print('top, bottop  : ', rx1-lx2, rx2-lx1)
@@ -260,7 +261,7 @@ def process_image(frame):
 
     return (lpos, rpos), frame
 
-#cap = cv2.VideoCapture("track.mkv")
+cap = cv2.VideoCapture("track.mkv")
 
 Width, Height = 640, 480
 mtx = np.array([[ 364.14123,    0.     ,  325.19317],
@@ -276,50 +277,34 @@ rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
 rate = rospy.Rate(20)
 
 
-while not image.size == (640*480*3):
-    continue
-
 p_gain = 0.3#0.25
 d_gain = 0.7 #0.7#1.7
 prev_cte = 0
 
 while not rospy.is_shutdown():
-    #global image
+	
+    #_, image = cap.read()
     cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
-    #print(pose)
+
     center = (pose[0] + pose[1])/2
     cte = center - 320
     d_term = cte - prev_cte
     prev_cte = cte
     steer = p_gain * cte + d_gain * d_term
-    #print(cte*0.4)
+
     if fail_count >2 :
-        #if dir_order[dir_count] == 'right' :
-        drive(50,20) #drive(50, 20)
-        #else :
-         #   drive(-40,15)
+        drive(50,20)
+       
     else :
         	
         if detect_stopline(cal_image, pose) :	
 		print('stopline!')
-		for _ in range(60):
-			drive(0,0)
-			rate.sleep()
+
 		#for _ in range(10):
 			#drive(0,15)
 			#rate.sleep()
-      	'''
-      	if detect_slope(cal_image, pose) :
-      		  print('slope!')
-      		  for _ in range(40):		
-      			    drive(0,0)
-      			    rate.sleep()
-      		  for _ in range(10):
-      			    drive(0,0)
-      			    rate.sleep()
-      	'''
-	drive(steer,20)#drive(cte*0.4, 40)#drive(steer, 40) #drive(cte*0.4,15)
+	drive(steer,20)
     cv2.imshow("hough", hough)
     rate.sleep()	
-    cv2.waitKey(1)
+    cv2.waitKey(0)
