@@ -4,6 +4,7 @@ import cv2, math, random, time
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
+from std_msgs.msg import Int32MultiArray
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 
@@ -12,11 +13,17 @@ bridge = CvBridge()
 Offset = 350
 Gap = 40
 detect_line = False
+cut_in = True
 image = np.empty(shape=[0])
+ultra_msg = None
 lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0,0,0,0,0,0,0,0,0,0
 dir_count = -1
 dir_order = ['right','right','right','left']
 fail_count = 0
+
+def sleep(n) :
+    for _ in range(n) :
+        rate.sleep()
 
 def detect_stopline(cal_image, pos):
     global Offset, Gap
@@ -28,10 +35,11 @@ def detect_stopline(cal_image, pos):
         stopline_image = stopline_image_processing(stopline_roi)
         cv2.imshow("bin", stopline_image)
         cNZ = cv2.countNonZero(stopline_image)
-        print(cNZ, x_len * Gap * 0.2,  x_len * Gap * 0.3,  x_len * Gap * 0.4)
+        #print(cNZ, x_len * Gap * 0.25,  x_len * Gap * 0.3,  x_len * Gap * 0.4)
+    	print('cnz : ', cNZ, x_len * Gap * 0.2)
         if cNZ > x_len * Gap * 0.2 :
             print("stopline")
-	    return True
+            return True
  
     return False
 
@@ -52,6 +60,10 @@ def drive(Angle, Speed):
     msg.speed = Speed
 
     pub.publish(msg)
+
+def ultra_callback(data) :
+    global ultra_msg
+    ultra_msg = data.data
 
 def img_callback(data):
     global image    
@@ -119,7 +131,7 @@ def divide_left_right(lines):
 
         x1, y1, x2, y2 = Line
         x_m = (x1 + x2)/2
-	if (slope < 0) and (x2 < Width/2 - 30):
+    	if (slope < 0) and (x2 < Width/2 - 30):
             if detect_line :
                 if (l_avg - 30 < x_m) and (x_m < l_avg + 30):
             	      left_lines.append([Line.tolist()])
@@ -131,13 +143,13 @@ def divide_left_right(lines):
             	      right_lines.append([Line.tolist()])
             else :
                 right_lines.append([Line.tolist()])
-	
-	'''
-        if (slope < 0) and (x2 < Width/2 - 90):
-            left_lines.append([Line.tolist()])
-        elif (slope > 0) and (x1 > Width/2 + 90):
-            right_lines.append([Line.tolist()])
-	'''
+    
+        '''
+            if (slope < 0) and (x2 < Width/2 - 90):
+                left_lines.append([Line.tolist()])
+            elif (slope > 0) and (x1 > Width/2 + 90):
+                right_lines.append([Line.tolist()])
+        '''
     return left_lines, right_lines
 
 
@@ -177,9 +189,9 @@ def get_line_pos(lines, left=False, right=False):
     
     if m == 0 and b == 0:
         if left :
-		return lx1, lx2, lpos, l_avg, False
-	if right :
-		return rx1, rx2, rpos, r_avg, False
+            return lx1, lx2, lpos, l_avg, False
+        if right :
+            return rx1, rx2, rpos, r_avg, False
     else:
         y = Gap / 2
         pos = (y - b) / m
@@ -194,7 +206,7 @@ def process_image(frame):
     global Width
     global Offset, Gap
     global lx1, lx2, rx1, rx2, lpos, rpos, l_avg, r_avg, top_l, bottom_l, detect_line
-    global dir_count, dir_order, fail_count
+    global dir_count, dir_order, fail_count, road_width
     # gray
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
@@ -222,28 +234,29 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    
+    #print('r-l : ', rpos-lpos)
+    road_width = rpos-lpos
     top_l = rx1-lx2
     bottom_l = rx2-lx1
     #print('top, bottop  : ', rx1-lx2, rx2-lx1)
     if not l_detect and not r_detect :
-	fail_count += 1
-	if fail_count == 3 :
-	    print('##########fail detecting line! :', fail_count, '##########')
-	    dir_count = (dir_count + 1) % 4 
-	detect_line = False
+        fail_count += 1
+        if fail_count == 3 :
+            print('##########fail detecting line! :', fail_count, '##########')
+            dir_count = (dir_count + 1) % 4 
+        detect_line = False
     else :
         if not l_detect :
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-440
+            lpos = rpos-440
         elif not r_detect :
-	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-	    rpos = lpos+440
+            rx1, rx2 = lx2 + top_l , lx1 + bottom_l
+            rpos = lpos+440
         else :   
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-400
+            lpos = rpos-400
             detect_line = True
-	fail_count = 0
+        fail_count = 0
     
     #print('road width : ', rpos - lpos)
     
@@ -260,7 +273,7 @@ def process_image(frame):
 
     return (lpos, rpos), frame
 
-#cap = cv2.VideoCapture("track.mkv")
+cap = cv2.VideoCapture("track.mkv")
 
 Width, Height = 640, 480
 mtx = np.array([[ 364.14123,    0.     ,  325.19317],
@@ -273,53 +286,46 @@ cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (Width, Height), 1, 
 rospy.init_node('hough_drive')
 pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
 rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
+rospy.Subscriber('xycar_ultrasonic', Int32MultiArray, ultra_callback)
 rate = rospy.Rate(20)
 
-
-while not image.size == (640*480*3):
-    continue
 
 p_gain = 0.3#0.25
 d_gain = 0.7 #0.7#1.7
 prev_cte = 0
 
+while True :
+    if image.size != (640*480*3) :
+	continue
+    if ultra_msg == None :
+        continue
+    break
+
 while not rospy.is_shutdown():
-    #global image
+
+    #_, image = cap.read()
     cal_image = to_calibrated(image)
     pose, hough = process_image(cal_image)
-    #print(pose)
+
     center = (pose[0] + pose[1])/2
     cte = center - 320
     d_term = cte - prev_cte
     prev_cte = cte
     steer = p_gain * cte + d_gain * d_term
-    #print(cte*0.4)
+    if cut_in and road_width < 300 and (ultra_msg[0] < 30 or ultra_msg[-1] < 80) :
+        drive(steer,0)
+        sleep(40)
+        cut_in = False
+
     if fail_count >2 :
-        #if dir_order[dir_count] == 'right' :
-        drive(50,20) #drive(50, 20)
-        #else :
-         #   drive(-40,15)
-    else :
-        	
+        drive(50,20)
+       
+    else :	
         if detect_stopline(cal_image, pose) :	
-		print('stopline!')
-		for _ in range(60):
-			drive(0,0)
-			rate.sleep()
-		#for _ in range(10):
-			#drive(0,15)
-			#rate.sleep()
-      	'''
-      	if detect_slope(cal_image, pose) :
-      		  print('slope!')
-      		  for _ in range(40):		
-      			    drive(0,0)
-      			    rate.sleep()
-      		  for _ in range(10):
-      			    drive(0,0)
-      			    rate.sleep()
-      	'''
-	drive(steer,20)#drive(cte*0.4, 40)#drive(steer, 40) #drive(cte*0.4,15)
+            print('stopline!')
+            drive(steer,0)
+            sleep(40)	
+        drive(steer,20)
     cv2.imshow("hough", hough)
     rate.sleep()	
     cv2.waitKey(1)
