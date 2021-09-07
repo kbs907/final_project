@@ -19,6 +19,11 @@ class DriveModule:
     def T_parking(self):
         pass
 
+    def cut_in(self, road_width, ultra_msg):
+        if road_width < 300 and (self.ultra_msg[0] < 30 or self.ultra_msg[-1] < 80):
+            return True
+        return False
+        
     def Hough_drive(self, cte, fail_count, stopline):
         self.prev_cte = cte
         d_term = cte - self.prev_cte

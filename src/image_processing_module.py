@@ -24,7 +24,7 @@ class ImageProcessingModule:
 
     # detected lane properties initialize
     lx1, lx2, rx1, rx2 = 0, 0, 0, 0
-    lpos, rpos, l_avg, r_avg, top_l, bottom_l = 0, 0, 0, 0, 0, 0
+    lpos, rpos, l_avg, r_avg, road_width, top_l, bottom_l = 0, 0, 0, 0, 0, 0, 0
     detect_line = False
 
     # direction
@@ -67,6 +67,7 @@ class ImageProcessingModule:
         self.rpos = 0
         self.l_avg = 0
         self.r_avg = 0
+        self.road_width = 0
         self.top_l = 0
         self.bottom_l =0
         self.detect_line = False
@@ -92,6 +93,9 @@ class ImageProcessingModule:
         
     def get_image_size(self):
         return self.image.size
+    
+    def get_road_width(self):
+        return self.road_width
         
     def to_calibrated(self, img):
         mtx = np.array([[ 364.14123,    0.     ,  325.19317],
@@ -104,7 +108,7 @@ class ImageProcessingModule:
         
         return tf_image
 
-    def get_traffic_light(self):
+    def get_traffic_light(self, traffic_mode):
         circles_x, circles_y = [], []
         roi = [0, 200, self.width/2 - 200, self.width/2 + 200]
         roi_img = self.image[roi[0]:roi[1], roi[2]:roi[3]]
@@ -113,11 +117,11 @@ class ImageProcessingModule:
         hsv_img = cv2.cvtColor(blur_img, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv_img)
 
-        # 1st traffic light
-#        circles = cv2.HoughCircles(v, cv2.HOUGH_GRADIENT, 1, 8, param1=30, param2=18, minRadius=5, maxRadius=15)
-        # 2nd traffic light
-        circles = cv2.HoughCircles(v, cv2.HOUGH_GRADIENT, 1, 15, param1=30, param2=18, minRadius=8, maxRadius=20)
-        
+        if traffic_mode == 'first':
+            circles = cv2.HoughCircles(v, cv2.HOUGH_GRADIENT, 1, 15, param1=30, param2=18, minRadius=8, maxRadius=20)
+        elif traffic_mode == 'second':
+            circles = cv2.HoughCircles(v, cv2.HOUGH_GRADIENT, 1, 8, param1=30, param2=18, minRadius=5, maxRadius=15)
+                        
         # HoughCircles에서 circles가 검출될 때
         if circles is not None:
             # circles의 차원이 3 이상(1개 검출되면 2차원)이고 검출된 circles가 3 이상일 때
@@ -129,19 +133,23 @@ class ImageProcessingModule:
                     circles_x.append(i[0])
                     circles_y.append(i[1])
                 
-                # circles의 x값의 max와 min의 차이가 90 이하이고, y 값의 max와 min의 차이가 5 이하 일때
-                # 1st_traffic
-#                if ((max(circles_x) - min(circles_x)) <= 90) and ((max(circles_y) - min(circles_y)) <= 10):
-                # circles의 x값의 max와 min의 차이가 70 이상 150 이하이고, y 값의 max와 min의 차이가 5 이하 일때
-                # 2st_traffic
-                if ((max(circles_x) - min(circles_x)) <= 150) and ((max(circles_x) - min(circles_x)) >= 70) and ((max(circles_y) - min(circles_y)) <= 10):
-                    # circle의 max 값인 인덱스가 초록불
-                    circles_max_x = np.argmax(circles_x)
-                    green_point = circles[0, circles_max_x, :]
-                    cv2.circle(roi_img,(green_point[0], green_point[1]), green_point[2],(0,255,0),2)
-                    
-                    if v[green_point[1]-10: green_point[1]+10, green_point[0]-10: green_point[0]+10].mean() >= 200:               
-                        return True
+                
+                if traffic_mode == 'first': 
+                    if ((max(circles_x) - min(circles_x)) <= 150) and ((max(circles_x) - min(circles_x)) >= 70) and ((max(circles_y) - min(circles_y)) <= 10):
+                        circles_max_x = np.argmax(circles_x)
+                        green_point = circles[0, circles_max_x, :]
+                        cv2.circle(roi_img,(green_point[0], green_point[1]), green_point[2],(0,255,0),2)
+                        if v[green_point[1]-10: green_point[1]+10, green_point[0]-10: green_point[0]+10].mean() >= 200:               
+                            return True
+                            
+                            
+                elif traffic_mode == 'second':
+                    if ((max(circles_x) - min(circles_x)) <= 90) and ((max(circles_y) - min(circles_y)) <= 10):
+                        circles_max_x = np.argmax(circles_x)
+                        green_point = circles[0, circles_max_x, :]
+                        cv2.circle(roi_img,(green_point[0], green_point[1]), green_point[2],(0,255,0),2)
+                        if v[green_point[1]-10: green_point[1]+10, green_point[0]-10: green_point[0]+10].mean() >= 200:               
+                            return True
                         
         return False
         
@@ -304,6 +312,8 @@ class ImageProcessingModule:
         # get center of lines
         self.lx1, self.lx2, self.lpos, self.l_avg, l_detect = self.get_line_pos(left_lines, left=True)
         self.rx1, self.rx2, self.rpos, self.r_avg, r_detect = self.get_line_pos(right_lines, right=True)
+
+        self.road_width = self.rpos - self.lpos
         self.top_l = self.rx1-self.lx2
         self.bottom_l = self.rx2-self.lx1
         if not l_detect and not r_detect :
