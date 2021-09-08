@@ -11,6 +11,7 @@ class ImageProcessingModule:
     # image reading setup
     bridge = CvBridge()
     image = np.empty(shape=[0])
+    cal_image = np.empty(shape=[0])
     width, height = 0, 0
 
     # image preprocessing params
@@ -26,11 +27,15 @@ class ImageProcessingModule:
     lx1, lx2, rx1, rx2 = 0, 0, 0, 0
     lpos, rpos, l_avg, r_avg, road_width, top_l, bottom_l = 0, 0, 0, 0, 0, 0, 0
     detect_line = False
+    l_fail_count = 0
+    r_fail_count = 0
 
     # direction
     dir_count = 0
     dir_order = ['right', 'right', 'right', 'left']
     fail_count = 0
+    corner_count = 0
+    intersec_count = 0
 
     ## optimization params ##
     ##					   ##
@@ -47,6 +52,7 @@ class ImageProcessingModule:
         # image reading setup
         self.bridge = CvBridge()
         self.image = np.empty(shape=[0])
+        self.cal_image = np.empty(shape=[0])
         self.width, self.height = 640, 480
 
         # image preprocessing params
@@ -71,12 +77,15 @@ class ImageProcessingModule:
         self.top_l = 0
         self.bottom_l =0
         self.detect_line = False
+        self.l_fail_count = 0
+        self.r_fail_count = 0
 
         # direction
         self.dir_count = -1
         self.dir_order = ['right', 'right', 'right', 'left']
         self.fail_count = 0
-
+        self.corner_count = 0
+        self.intersec_count = 0
         ## optimization params ##
         ##					   ##
         # ROI setting
@@ -94,6 +103,9 @@ class ImageProcessingModule:
     def get_image_size(self):
         return self.image.size
     
+    def get_corner_count(self):
+        return self.corner_count
+
     def get_road_width(self):
         return self.road_width
         
@@ -153,12 +165,12 @@ class ImageProcessingModule:
                         
         return False
         
-    def detect_stopline(self, detect_image):
+    def detect_stopline(self):
         d_lpos = max(self.lpos, 0)
         d_rpos = min(self.rpos, 640)
         x_len = d_rpos - d_lpos - 20
         if d_lpos!= 0 and d_rpos != 0 and x_len > 0:
-            stopline_roi = detect_image[360:390, d_lpos + 10 :d_rpos - 10]
+            stopline_roi = self.cal_image[360:390, d_lpos + 10 :d_rpos - 10]
             stopline_image = self.stopline_image_processing(stopline_roi)
             #cv2.imshow("bin", stopline_image)
             cNZ = cv2.countNonZero(stopline_image)
@@ -292,20 +304,19 @@ class ImageProcessingModule:
 
     # show image and return lpos, rpos
     def get_cte(self):
-        cal_image = self.to_calibrated(self.image)
-        gray = cv2.cvtColor(cal_image, cv2.COLOR_BGR2GRAY)
+        self.cal_image = self.to_calibrated(self.image)
+        gray = cv2.cvtColor(self.cal_image, cv2.COLOR_BGR2GRAY)
         blur_gray = cv2.GaussianBlur(gray,(self.blur_size, self.blur_size), 0)
         edge_img = cv2.Canny(np.uint8(blur_gray), self.canny_low, self.canny_high)
         #cv2.imshow("canny", edge_img)
 
         # HoughLinesP : cv2.HoughLinesP(image, rho, theta, threshold, minLineLength, maxLineGap)
         roi = edge_img[self.Offset : self.Offset+self.Gap, 0 : self.width]
-        cv2.imshow('roi', roi)
         all_lines = cv2.HoughLinesP(roi,1,math.pi/180,30,30,10) # 10, 10 , 50
 
         # divide left, right lines
         if all_lines is None:
-            return 0, cal_image
+            return 0, self.cal_image
         
         left_lines, right_lines = self.divide_left_right(all_lines)
 
@@ -321,36 +332,47 @@ class ImageProcessingModule:
             if self.fail_count == 3 :
                 print('##########fail detecting line! :', self.fail_count, '##########')
                 self.dir_count = (self.dir_count + 1) % 4 
+                self.intersec_count += 1
             self.detect_line = False
         else :
             if not l_detect :
                 self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
                 self.lpos = self.rpos-400
+                self.l_fail_count += 1
+                self.r_fail_count = 0
+                if self.l_fail_count == 5 :
+                    self.corner_count += 1
             elif not r_detect :
                 self.rx1, self.rx2 = self.lx2 + self.top_l , self.lx1 + self.bottom_l
                 self.rpos = self.lpos+400
+                self.r_fail_count += 1
+                self.l_fail_count = 0
+                if self.r_fail_count == 5 :
+                    self.corner_count += 1
             else :   
                 self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
                 self.lpos = self.rpos-370
                 self.detect_line = True
+                self.l_fail_count = 0
+                self.r_fail_count = 0
             self.fail_count = 0
-            
-        detect_image = cal_image.copy()
+        '''    
+        draw_image = self.cal_image.copy()
         
-        cal_image = cv2.line(cal_image, (int(self.lx1), self.height), (int(self.lx2), (self.height/2)), (255, 0,0), 3)
-        cal_image = cv2.line(cal_image, (int(self.rx1), self.height), (int(self.rx2), (self.height/2)), (255, 0,0), 3)
+        draw_image = cv2.line(draw_image, (int(self.lx1), self.height), (int(self.lx2), (self.height/2)), (255, 0,0), 3)
+        draw_image = cv2.line(draw_image, (int(self.rx1), self.height), (int(self.rx2), (self.height/2)), (255, 0,0), 3)
 
         # draw lines
-        cal_image = self.draw_lines(cal_image, left_lines)
-        cal_image = self.draw_lines(cal_image, right_lines)
+        draw_image = self.draw_lines(draw_image, left_lines)
+        draw_image = self.draw_lines(draw_image, right_lines)
                                         
         # draw rectangle
-        cal_image = self.draw_rectangle(cal_image, offset=self.Offset)
-        cv2.imshow("cal_image", cal_image)
+        draw_image = self.draw_rectangle(draw_image, offset=self.Offset)
+        cv2.imshow("draw_image", draw_image)
         cv2.waitKey(1)
-                
+             
+        '''     
         center = (self.lpos + self.rpos)/2
         cte = center - self.width/2
         
-        print(cte, self.fail_count, self.detect_stopline(detect_image))
-        return cte, self.fail_count, self.detect_stopline(detect_image)
+        return cte, self.fail_count
