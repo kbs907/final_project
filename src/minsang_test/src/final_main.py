@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy, time
-from std_msgs.msg import Header, ColorRGBA
+from std_msgs.msg import Header, ColorRGBA, Int32MultiArray
 from geometry_msgs.msg import PoseArray, Pose
 from ar_track_alvar_msgs.msg import AlvarMarkers
 from sensor_msgs.msg import Image, Imu
@@ -14,18 +14,25 @@ import parallel_parking
 
 rospy.init_node('final_main')
 laserdata = None
+ultradata = None
 mode = -1
 imagedata = None
 ardata = None
 runHoughT = False
-runHoughS = True
-runParallel = False
+runHoughS = False
+runParallel = True
 roll, pitch, yaw = 0, 0, 0
 
 time.sleep(5)
 
+def ultra_callback(data):
+    global ultradata
+    ultradata = data.data
+    if runParallel:
+        parallel_parking.ultra_callback(ultradata)
+
 def laser_callback(data):
-    global runHoughS
+    global runHoughS, runParallel
 
 def img_callback(data):
     global mode, runHoughT, runHoughS, runParallel
@@ -48,8 +55,9 @@ def imu_callback(data):
     
 #rospy.Subscriber('imu', Imu, imu_callback)
 #rospy.Subscriber('/ar_pose_marker', AlvarMarkers, ar_callback)
-#rospy.Subscriber('/scan', LaserScan, laser_callback)
+rospy.Subscriber('/scan', LaserScan, laser_callback)
 rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
+rospy.Subscriber("xycar_ultrasonic", Int32MultiArray, ultra_callback)
 rate = rospy.Rate(20)
 while not rospy.is_shutdown():
     if runHoughT:

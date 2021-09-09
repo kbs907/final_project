@@ -68,8 +68,6 @@ def img_callback(data):
     global image    
     image = bridge.imgmsg_to_cv2(data, "bgr8")
   
-
-  
 def init_node_1():
   global steering_pub
   rospy.init_node("yolo_mission")

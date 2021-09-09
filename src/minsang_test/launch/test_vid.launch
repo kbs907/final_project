@@ -11,5 +11,5 @@
     <param name="io_method" value="mmap"/>
   </node>
 
-  <node name="cam_node" pkg="minsang_test" type="new_roi_video.py" output="screen" />
+  <node name="cam_node" pkg="minsang_test" type="hough_drive_low.py" output="screen" />
 </launch>
