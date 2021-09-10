@@ -105,8 +105,9 @@ class DriveModule:
         return False
     
     def Hough_drive(self, cte, fail_count):
-        self.prev_cte = cte
         d_term = cte - self.prev_cte
+        self.prev_cte = cte
+        
         
         steer = self.p_gain * cte + self.d_gain * d_term
         
