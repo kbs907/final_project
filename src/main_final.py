@@ -60,11 +60,11 @@ def init():
     ultraModule = UltraModule()
     arModule = ArModule()
 
-    find_stopline = False	# 정지선 찾기 on/off
-    find_traffic = True		# 신호 찾기 on/off
+    find_stopline = True#False	# 정지선 찾기 on/off
+    find_traffic = True#False #True		# 신호 찾기 on/off
     do_T_parking = True
     do_yolo_stop = True
-    mode = '1'
+    mode = '2'
     cut_in = True
     yolo_person = True
     class_name = 'person'
@@ -97,8 +97,7 @@ def ultra_callback(data) :
 
 def ar_callback(data):
     global arModule
-    if len(data.markers) :
-        arModule.set_arData(data)
+    arModule.set_arData(data)
 
 if __name__ == '__main__':
     init()
@@ -124,9 +123,10 @@ if __name__ == '__main__':
 
         cte, fail_count = imageProcessModule.get_cte()
         angle, speed = driveModule.Hough_drive(cte, fail_count)  # 기본 주행
-        
-        print ('imageProcessModule.get_corner_count', imageProcessModule.get_corner_count())
+        imageProcessModule.detect_stopline()
+        #print ('imageProcessModule.get_corner_count', imageProcessModule.get_corner_count())
         if mode == '1' :	#시작~교차로 전
+            speed = 30
             if find_traffic :
                 if not imageProcessModule.get_traffic_light('first') :
                     angle, speed = 0, 0
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                     cut_in = False
 
             else :	# 일반 주행
-                if imageProcessModule.get_corner_count() == 3 :
+                if imageProcessModule.get_corner_count() == 2 :
                     mode = '2'
                     find_stopline = True	# 교차로 진입 전이므로 정지선 찾기 on
                     find_traffic = True		# 신호 찾기 on
@@ -150,16 +150,20 @@ if __name__ == '__main__':
         
         elif mode == '2' :	# 교차로
             yolo_size = yoloModule.get_size(class_name)
-            if find_stopline and imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
-                driveModule.stop_nsec(3) # 3초 정차
-                find_stopline = False
+            #print('ardata : ', arModule.get_ardata())
+            print('ardistance : ', arModule.get_distance())
+            if find_stopline :
+                speed = 25
+                if imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
+                    driveModule.stop_nsec(3) # 3초 정차
+                    find_stopline = False
                     
             elif find_traffic :
                 if not imageProcessModule.get_traffic_light('second') : 
                     angle, speed = driveModule.stop()
                 else :
                     find_traffic = False
-                    find_stopline = True
+
             elif do_T_parking and arModule.is_ar() :
                 driveModule.T_parking(arModule.get_yaw())	# t주차 알고리즘
                 do_T_parking = False

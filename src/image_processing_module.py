@@ -27,6 +27,8 @@ class ImageProcessingModule:
     lx1, lx2, rx1, rx2 = 0, 0, 0, 0
     lpos, rpos, l_avg, r_avg, road_width, top_l, bottom_l = 0, 0, 0, 0, 0, 0, 0
     detect_line = False
+    l_detect = False
+    r_detect = False
     l_fail_count = 0
     r_fail_count = 0
 
@@ -64,6 +66,7 @@ class ImageProcessingModule:
                     [   0.     ,    0.     ,    1.     ]])
         self.dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
         self.cal_mtx, self.cal_roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.width, self.height), 1, (self.width, self.height))
+        
         # lane parameters
         self.low_slope_threshold = 0
         self.high_slope_threshold = 10
@@ -81,6 +84,8 @@ class ImageProcessingModule:
         self.top_l = 0
         self.bottom_l =0
         self.detect_line = False
+        self.l_detect = False
+        self.r_detect = False
         self.l_fail_count = 0
         self.r_fail_count = 0
 
@@ -93,13 +98,13 @@ class ImageProcessingModule:
         ## optimization params ##
         ##					   ##
         # ROI setting
-        self.Offset = 350
+        self.Offset = 340
         self.Gap = 40
             
         # lane detecting range
         self.l_existable_range = self.width/2 - 30
         self.r_existable_range = self.width/2 + 30
-        self.detecting_gap = 30
+        self.detecting_gap = 25
         
     def set_image(self, data):
         self.image = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -172,10 +177,10 @@ class ImageProcessingModule:
             #cv2.imshow("bin", stopline_image)
             cNZ = cv2.countNonZero(stopline_image)
             #print(cNZ, x_len * self.Gap * 0.25,  x_len * self.Gap * 0.3,  x_len * self.Gap * 0.4)
-    	      #print('cnz : ', cNZ, x_len * self.Gap * 0.2)
+            #print('cnz : ', cNZ, x_len * self.Gap * 0.2)
             if cNZ > x_len * self.Gap * 0.2 :
                 print("stopline")
-      	        return True
+                return True
                 
         return False
 
@@ -240,13 +245,13 @@ class ImageProcessingModule:
             x_m = (x1 + x2)/2
             
             if (slope < 0) and (x2 < self.l_existable_range):
-                if self.detect_line :
+                if self.l_detect :
                     if (self.l_avg - self.detecting_gap < x_m) and (x_m < self.l_avg + self.detecting_gap):
                         left_lines.append([Line.tolist()])
                 else :
                     left_lines.append([Line.tolist()])
             elif (slope > 0) and (x1 > self.r_existable_range):
-                if self.detect_line :
+                if self.r_detect :
                     if (self.r_avg - self.detecting_gap < x_m) and (x_m < self.r_avg + self.detecting_gap):
                         right_lines.append([Line.tolist()])
                 else :
@@ -318,13 +323,14 @@ class ImageProcessingModule:
         left_lines, right_lines = self.divide_left_right(all_lines)
 
         # get center of lines
-        self.lx1, self.lx2, self.lpos, self.l_avg, l_detect = self.get_line_pos(left_lines, left=True)
-        self.rx1, self.rx2, self.rpos, self.r_avg, r_detect = self.get_line_pos(right_lines, right=True)
+        self.lx1, self.lx2, self.lpos, self.l_avg, self.l_detect = self.get_line_pos(left_lines, left=True)
+        self.rx1, self.rx2, self.rpos, self.r_avg, self.r_detect = self.get_line_pos(right_lines, right=True)
 
         self.road_width = self.rpos - self.lpos
+        #print('road_width : ' , self.road_width)        
         self.top_l = self.rx1-self.lx2
         self.bottom_l = self.rx2-self.lx1
-        if not l_detect and not r_detect :
+        if not self.l_detect and not self.r_detect :
             self.fail_count += 1
             if self.fail_count == 3 :
                 print('##########fail detecting line! :', self.fail_count, '##########')
@@ -332,26 +338,28 @@ class ImageProcessingModule:
                 self.intersec_count += 1
             self.detect_line = False
         else :
-            if not l_detect :
+            if not self.l_detect :
                 self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
                 self.lpos = self.rpos-400
                 self.l_fail_count += 1
                 self.r_fail_count = 0
-                if self.l_fail_count == 5 :
+                print('l_fail_count : ', self.l_fail_count)
+                if self.l_fail_count == 20 :
                     self.corner_count += 1
-            elif not r_detect :
+            elif not self.r_detect :
                 self.rx1, self.rx2 = self.lx2 + self.top_l , self.lx1 + self.bottom_l
                 self.rpos = self.lpos+400
                 self.r_fail_count += 1
                 self.l_fail_count = 0
-                if self.r_fail_count == 5 :
+                print('r_fail_count : ', self.r_fail_count)
+                if self.r_fail_count == 20 :
                     self.corner_count += 1
             else :   
                 self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
                 self.lpos = self.rpos-370
-                self.detect_line = True
                 self.l_fail_count = 0
                 self.r_fail_count = 0
+            self.detect_line = True
             self.fail_count = 0
         '''    
         draw_image = self.cal_image.copy()
