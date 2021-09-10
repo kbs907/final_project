@@ -93,7 +93,7 @@ TRAJECTORY_BUILDER.pure_localization_trimmer = {
 POSE_GRAPH.optimize_every_n_nodes = 1
 POSE_GRAPH.constraint_builder.min_score = 0.45 --0.35
 POSE_GRAPH.optimization_problem.huber_scale = 1e1
-POSE_GRAPH.constraint_builder.global_localization_min_score = 0.5--0.6
+POSE_GRAPH.constraint_builder.global_localization_min_score = 0.6 --0.6
 
 POSE_GRAPH.constraint_builder.sampling_ratio = 0.0001 --0.3
 POSE_GRAPH.constraint_builder.max_constraint_distance = 15.

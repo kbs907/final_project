@@ -15,7 +15,7 @@ class ArModule():
         self.yaw = 0
 
     def set_arData(self, data):
-    for i in data.markers :
+        for i in data.markers :
             self.id = i.id
             self.arData["DX"] = i.pose.pose.position.x
             self.arData["DY"] = i.pose.pose.position.y

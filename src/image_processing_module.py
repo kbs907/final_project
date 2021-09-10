@@ -61,7 +61,12 @@ class ImageProcessingModule:
         self.blur_size = 5
         self.canny_low = 50
         self.canny_high = 150
-
+        self.mtx = np.array([[ 364.14123,    0.     ,  325.19317],
+                    [   0.     ,  365.9626 ,  216.14575],
+                    [   0.     ,    0.     ,    1.     ]])
+        self.dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
+        self.cal_mtx, self.cal_roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.width, self.height), 1, (self.width, self.height))
+        
         # lane parameters
         self.low_slope_threshold = 0
         self.high_slope_threshold = 10
@@ -114,14 +119,7 @@ class ImageProcessingModule:
         return self.road_width
         
     def to_calibrated(self, img):
-        mtx = np.array([[ 364.14123,    0.     ,  325.19317],
-                    [   0.     ,  365.9626 ,  216.14575],
-                    [   0.     ,    0.     ,    1.     ]])
-        dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
-        cal_mtx, cal_roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (self.width, self.height), 1, (self.width, self.height))
-        
-        tf_image = cv2.undistort(img, mtx, dist, None, cal_mtx)
-        
+        tf_image = cv2.undistort(img, self.mtx, self.dist, None, self.cal_mtx)
         return tf_image
 
     def get_traffic_light(self, traffic_mode):
@@ -329,8 +327,8 @@ class ImageProcessingModule:
         self.rx1, self.rx2, self.rpos, self.r_avg, self.r_detect = self.get_line_pos(right_lines, right=True)
 
         self.road_width = self.rpos - self.lpos
-    #print('road_width : ' , self.road_width)        
-    self.top_l = self.rx1-self.lx2
+        #print('road_width : ' , self.road_width)        
+        self.top_l = self.rx1-self.lx2
         self.bottom_l = self.rx2-self.lx1
         if not self.l_detect and not self.r_detect :
             self.fail_count += 1

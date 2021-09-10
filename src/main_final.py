@@ -163,6 +163,7 @@ if __name__ == '__main__':
                     angle, speed = driveModule.stop()
                 else :
                     find_traffic = False
+
             elif do_T_parking and arModule.is_ar() :
                 driveModule.T_parking(arModule.get_yaw())	# t주차 알고리즘
                 do_T_parking = False

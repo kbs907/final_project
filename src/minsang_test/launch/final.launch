@@ -28,7 +28,7 @@
     <param name="frame_id" type="string" value="imu" />
     <param name="topic" type="string" value="imu" />
   </node>
-  
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic_noviewer.launch"/>
     <node name="xycar_lidar" pkg="xycar_lidar" type="xycar_ydlidar" output="screen" respawn="false" >
       <param name="port"         type="string" value="/dev/ttyLIDAR"/>  
       <param name="baudrate"         type="int" value="230400"/>  
