@@ -5,8 +5,12 @@ import cv2
 from darknet_ros_msgs.msg import BoundingBoxes
 
 class YoloModule:
+    boxdata = None
+    yolo_stop_size = 0
+
     def __init__(self):
         self.boxdata = None
+        self.yolo_stop_size = 110
 
     def set_boxdata(self, boxdata):
         self.boxdata = boxdata
@@ -39,7 +43,7 @@ class YoloModule:
                 if i.Class == "cow":
                     return ["cow", i.xmin, i.xmax]
     '''
-    def get_mission(self, class_name):
+    def get_size(self, class_name):
       if self.boxdata is not None:
           for i in self.boxdata.bounding_boxes:
               if i.Class == class_name :
@@ -50,4 +54,3 @@ class YoloModule:
               else:
                   return None
      #def yolo_drive(self, class_name):
-        

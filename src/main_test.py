@@ -44,7 +44,7 @@ def test1():
     global driveModule
     
     cte, fail_count, stopline = imageProcessModule.get_cte()
-    speed, angle = driveModule.Hough_drive(cte, fail_count, stopline)
+    angle, speed = driveModule.Hough_drive(cte, fail_count, stopline)
     xycar_drive(speed, angle)
     
 def xycar_drive(angle, speed): 

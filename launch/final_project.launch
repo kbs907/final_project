@@ -1,7 +1,8 @@
 <launch>
 
   <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
-
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic_noviewer.launch"/>
+  
   <node name="usb_cam" output="screen" pkg="usb_cam" type="usb_cam_node">
     <param name="video_device" value="/dev/videoCAM" />
     <param name="autoexposure" value="false" />
@@ -9,11 +10,41 @@
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
     <param name="pixel_format" value="yuyv" />
-    <param name="camera_frame_id" value="usb_cam" />
+    <param name="camera_frame_id" value="map" />
+    <param name="camera_info_url" value="file://$(find ar_viewer)/calibration/usb_cam.yaml" />
     <param name="io_method" value="mmap" />
   </node>
+  
+  <!-- darknet_ros -->
+    <arg name="yolo_weights_path" default="$(find darknet_ros)/yolo_network_config/weights"/>
+    <arg name="yolo_config_path" default="$(find darknet_ros)/yolo_network_config/cfg"/>
 
-  <node name="auto_drive" output="screen" pkg="final_project" type="main.py" />
+    <arg name="ros_param_file" default="$(find darknet_ros)/config/ros.yaml"/>
+    <arg name="network_param_file" default="$(find darknet_ros)/config/yolov2-voc.yaml"/>
+
+    <rosparam command="load" ns="darknet_ros" file="$(arg ros_param_file)"/>
+    <rosparam command="load" ns="darknet_ros" file="$(arg network_param_file)"/>
+
+    <arg name="launch_prefix" default=""/>
+
+    <node pkg="darknet_ros" type="darknet_ros" name="darknet_ros" launch-prefix="$(arg launch_prefix)">
+      <param name="weights_path"          value="$(arg yolo_weights_path)" />
+      <param name="config_path"           value="$(arg yolo_config_path)" />
+      <remap from="camera/rgb/image_raw"  to="/usb_cam/image_raw" />
+    </node>
+
+  <!-- AR -->
+  <node name="ar_track_alvar" pkg="ar_track_alvar" type="individualMarkersNoKinect" respawn="false" output="screen">
+    <param name="marker_size"           type="double" value="9.0" />
+    <param name="max_new_marker_error"  type="double" value="0.05" />
+    <param name="max_track_error"       type="double" value="0.05" />
+    <param name="output_frame"          type="string" value="map" />
+
+    <remap from="camera_image"  to="/usb_cam/image_raw" />
+    <remap from="camera_info"   to="/usb_cam/camera_info" />
+  </node>
+
+  <node name="main" output="screen" pkg="final_project" type="main_final.py" />
 
 </launch>
 

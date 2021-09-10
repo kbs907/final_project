@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image
 # mode 3, speed 40, offset 350 : p= 0.3, d= 0.7
 
 bridge = CvBridge()
-Offset = 350 #330
+Offset = 340 #330
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
@@ -197,7 +197,7 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    
+    #print('road_width : ', rpos-lpos)
     top_l = rx1-lx2
     bottom_l = rx2-lx1
     #print('top, bottop  : ', rx1-lx2, rx2-lx1)
@@ -210,13 +210,15 @@ def process_image(frame):
     else :
         if not l_detect :
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-440
+	    lpos = rpos-400
+            
         elif not r_detect :
 	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-	    rpos = lpos+440
+	    rpos = lpos+400
+            print('lost right line')
         else :   
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-400
+	    lpos = rpos-370
         detect_line = True
 	fail_count = 0
     
@@ -269,7 +271,8 @@ while not rospy.is_shutdown():
     if fail_count >2 :
         drive(50, 30)
     else :
-        drive(steer,40)
+        #drive(0,40)
+        drive(steer,20)
     cv2.imshow("hough", hough)
     rate.sleep()
     cv2.waitKey(1)
