@@ -4,8 +4,11 @@ class LidarModule :
     def __init__(self):
         self.lidar_points = None
 
-    def set_lidardata(self, data):
+    def set_lidarData(self, data):
         self.lidar_points = data.ranges
+
+    def get_data(self) :
+        return self.lidar_points
 
     def can_rotary_in(self):
         if len([i for i in self.lidar_points[42:84] if i>0 and i<1.5]) :

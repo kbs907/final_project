@@ -20,6 +20,7 @@ from yolo_module import *
 from drive_module import *
 from ultra_module import *
 from ar_module import *
+from lidar_module import *
 
 ### module 사용을 위한 전역 변수 ###
 global imageProcessModule
@@ -45,6 +46,7 @@ def init():
     global driveModule
     global ultraModule
     global arModule
+    global lidarModule
 
     global find_stopline	# 정지선 찾기 on/off
     global find_traffic		# 신호 찾기 on/off
@@ -61,7 +63,7 @@ def init():
     driveModule = DriveModule()
     ultraModule = UltraModule()
     arModule = ArModule()
-
+    lidarModule = LidarModule()
     find_stopline = True#False	# 정지선 찾기 on/off
     find_traffic = True#False #True		# 신호 찾기 on/off
     find_ar = True
@@ -76,7 +78,7 @@ def init():
     rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
     rospy.Subscriber('xycar_ultrasonic', Int32MultiArray, ultra_callback)
     rospy.Subscriber('ar_pose_marker', AlvarMarkers, ar_callback)
-
+    rospy.Subscriber('scan', LaserScan, lidar_callback)
 
 def sensor_check():
     global imageProcessModule
@@ -86,6 +88,8 @@ def sensor_check():
         if imageProcessModule.get_image_size() != (640*480*3) :
             continue
         if not ultraModule.get_data() :
+            continue
+        if not lidarModule.get_data() :
             continue
         break
 
@@ -101,6 +105,10 @@ def ultra_callback(data) :
 def ar_callback(data):
     global arModule
     arModule.set_arData(data)
+
+def lidar_callback(data):
+    global lidarModule
+    lidarModule.set_lidarData(data)
 
 if __name__ == '__main__':
     init()
@@ -160,7 +168,7 @@ if __name__ == '__main__':
             if find_stopline :
                 speed = 25
                 if imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
-                    driveModule.stop_nsec(3) # 3초 정차
+                    driveModule.stop_nsec(1) # 1초 정차
                     find_stopline = False
                     
             elif find_traffic :
@@ -198,16 +206,21 @@ if __name__ == '__main__':
                 mode = '4'
 
         elif mode = '4' # 언덕이후~ 로터리전
-            if 정지선 :
-                angle, speed = imageProcessModule.stop()
-                pub.publish(msg)
-                time.sleep(3)
-                mode = '5'
+            if find_stopline :
+                speed = 25
+                if imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
+                    driveModule.stop_nsec(1) # 1초 정차
+                    find_stopline = False
+            else :
+                if lidarModule.can_rotary_in() :  #로터리 진입 가능하면
+                    mode = '5'
+                else :
+                    speed = 0
 
         elif mode = '5' # 로터리
-            if 장애물 있으면 :
-                angle, speed = 0, 0
-            if 로터리 나오면 : # 주차 ar태그 pose로 판단
+            if lidarModule.forward_obstacle() :
+                speed = 10
+            if 로터리 나오면 : # 주차 ar태그 pose로 판단 또는 차선으로
                 mode = '6'
 
         elif mode = '6' # 장애물 회피
