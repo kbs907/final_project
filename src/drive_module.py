@@ -18,27 +18,59 @@ class DriveModule:
         self.pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
         pass
 
-    def T_parking(self, angle):
-        global pub
-        for i in range(10):
-	        self.msg.angle = 0
-	        self.msg.speed = 0
-	        self.pub.publish(self.msg)
-	        rospy.sleep(0.1)
-        for i in range(30):
-	        self.msg.angle = angle*-150
-	        self.msg.speed = -25
-	        self.pub.publish(self.msg)
-	        rospy.sleep(0.1)
-        for i in range(20):
-	        self.msg.angle = angle*75
-	        self.msg.speed = -25
-	        self.pub.publish(self.msg)
-	        rospy.sleep(0.1)
+    def drive(self, angle, speed) :
+        self.msg.angle = angle
+        self.msg.speed = speed
+
+        print(angle, speed)
+        self.pub.publish(self.msg)
+       
+    def stop(self) :
+        return (0, 0)
+    
+    def stop_nsec(self, stop_time) :
+        start_time = time.time()
         self.msg.angle = 0
         self.msg.speed = 0
-        self.pub.publish(self.msg)
+        
+        while (time.time() <= start_time + stop_time):
+            pass
+    
+    def start_T_parking(self):
+        print('***** start T parking *****')
+        for i in range(5):
+            self.drive(-5, 10)
+            rospy.sleep(0.1)
             
+        for i in range(30): #17
+            self.drive(50, 10)
+            rospy.sleep(0.1)
+
+        for i in range(10):
+            self.drive(0, 0)
+            rospy.sleep(0.1)
+
+    def T_parking(self, dist, degree):
+        print('degree', degree)
+        
+        for i in range(30):
+            self.drive(-(degree*2), -35)
+            rospy.sleep(0.1)
+        for i in range(10):
+            self.drive(degree/2, -27)
+            rospy.sleep(0.1)
+        self.stop_nsec(2)
+
+    def end_T_parking(self, degree):
+        print('***** end T parking *****')
+        self.stop_nsec(3)
+        for i in range(30):
+            self.drive(-degree, 20)
+        for i in range(30):
+            self.drive(-30, 20)
+
+        return False
+
     def yolo_drive(self, angle, class_name, yolo_size):
         yolo_stop_size = 110
 
@@ -72,22 +104,6 @@ class DriveModule:
             return True
         return False
     
-    def stop(self) :
-        return (0, 0)
-    
-    def stop_nsec(self, stop_time) :
-        start_time = time.time()
-        self.msg.angle = 0
-        self.msg.speed = 0
-        self.pub.publish(self.msg)
-        while (time.time() <= start_time + stop_time):
-            pass
-    
-    def drive(self, angle, speed) :
-        self.msg.angle = angle
-        self.msg.speed = speed
-        self.pub.publish(self.msg)
-    
     def Hough_drive(self, cte, fail_count):
         self.prev_cte = cte
         d_term = cte - self.prev_cte
@@ -95,7 +111,7 @@ class DriveModule:
         steer = self.p_gain * cte + self.d_gain * d_term
         
         if fail_count > 2:
-            return (50, 30)
+            return (50, 15)
 	'''
         else:
             if stopline:
@@ -104,4 +120,4 @@ class DriveModule:
             		for _ in range(60):
               			return (steer, 0)
         '''
-        return (steer, 40)
+        return (steer, 15)

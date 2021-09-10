@@ -31,6 +31,7 @@ global arModule
 ### main 전역 변수 ###
 global find_stopline	# 정지선 찾기 on/off
 global find_traffic		# 신호 찾기 on/off
+global find_ar
 global do_T_parking
 global do_yolo_stop
 global mode
@@ -47,6 +48,7 @@ def init():
 
     global find_stopline	# 정지선 찾기 on/off
     global find_traffic		# 신호 찾기 on/off
+    global find_ar
     global do_T_parking
     global do_yolo_stop
     global mode
@@ -62,7 +64,8 @@ def init():
 
     find_stopline = True#False	# 정지선 찾기 on/off
     find_traffic = True#False #True		# 신호 찾기 on/off
-    do_T_parking = True
+    find_ar = True
+    do_T_parking = False
     do_yolo_stop = True
     mode = '2'
     cut_in = True
@@ -115,6 +118,7 @@ if __name__ == '__main__':
 
         global find_stopline
         global find_traffic
+        global find_ar
         global do_T_parking
         global do_yolo_stop
         global mode
@@ -151,7 +155,8 @@ if __name__ == '__main__':
         elif mode == '2' :	# 교차로
             yolo_size = yoloModule.get_size(class_name)
             #print('ardata : ', arModule.get_ardata())
-            print('ardistance : ', arModule.get_distance())
+            find_stopline, find_traffic = False, False
+
             if find_stopline :
                 speed = 25
                 if imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
@@ -163,10 +168,23 @@ if __name__ == '__main__':
                     angle, speed = driveModule.stop()
                 else :
                     find_traffic = False
-
-            elif do_T_parking and arModule.is_ar() :
-                driveModule.T_parking(arModule.get_yaw())	# t주차 알고리즘
-                do_T_parking = False
+            
+            elif find_ar and arModule.is_ar():
+                find_ar = False
+                do_T_parking = True
+            
+            elif do_T_parking:
+                driveModule.start_T_parking()
+                driveModule.T_parking(arModule.get_distance(), arModule.get_arctan())
+                '''
+                if arModule.finish_T_parking():
+                    driveModule.T_parking(arModule.get_distance(), arModule.get_arctan())
+                else:
+                    do_T_parking = driveModule.end_T_parking()
+                '''
+                do_T_parking = driveModule.end_T_parking(arModule.get_arctan())
+                do_yolo_stop = True
+    
             else :
                 if do_yolo_stop and yolo_size != None :
                     do_yolo_stop, class_name = driveModule.yolo_drive(angle, class_name, yolo_size)
