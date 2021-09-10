@@ -179,10 +179,10 @@ class ImageProcessingModule:
             #cv2.imshow("bin", stopline_image)
             cNZ = cv2.countNonZero(stopline_image)
             #print(cNZ, x_len * self.Gap * 0.25,  x_len * self.Gap * 0.3,  x_len * self.Gap * 0.4)
-    	    #print('cnz : ', cNZ, x_len * self.Gap * 0.2)
+            #print('cnz : ', cNZ, x_len * self.Gap * 0.2)
             if cNZ > x_len * self.Gap * 0.2 :
                 print("stopline")
-      	        return True
+                return True
                 
         return False
 
@@ -327,10 +327,10 @@ class ImageProcessingModule:
         # get center of lines
         self.lx1, self.lx2, self.lpos, self.l_avg, self.l_detect = self.get_line_pos(left_lines, left=True)
         self.rx1, self.rx2, self.rpos, self.r_avg, self.r_detect = self.get_line_pos(right_lines, right=True)
-	
+
         self.road_width = self.rpos - self.lpos
-	#print('road_width : ' , self.road_width)        
-	self.top_l = self.rx1-self.lx2
+    #print('road_width : ' , self.road_width)        
+    self.top_l = self.rx1-self.lx2
         self.bottom_l = self.rx2-self.lx1
         if not self.l_detect and not self.r_detect :
             self.fail_count += 1
