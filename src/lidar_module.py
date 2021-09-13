@@ -21,7 +21,6 @@ class LidarModule :
             return True
         return False
 
-
     def detect_first_obstacle(self):
         for i in range((15*505)/360, (45*505)/360):
             if self.lidar_points[i] <= 0.3 and self.lidar_points[i] > 0.0:
@@ -32,14 +31,14 @@ class LidarModule :
         return None
 
     def detect_obstacle_lidar_flag(self, first_obstacle, flag):
-        if flag == False
+        if flag == False:
             if first_obstacle == 'left' :
                 if self.lidar_points[(90*505)/360] < 0.4 and self.lidar_points[(90*505)/360] > 0.0:
                     return True
             elif first_obstacle =='right' :
                 if self.lidar_points[(270*505)/360] < 0.4 and self.lidar_points[(270*505)/360] > 0.0:
                     return True
-        if flag == True
+        if flag == True:
             if first_obstacle == 'left' and (self.lidar_points[(90*505)/360] > 0.45 or self.lidar_points[(90*505)/360] == 0.0):
                 return False
             if first_obstacle == 'right' and (self.lidar_points[(270*505)/360] > 0.45 or self.lidar_points[(270*505)/360] == 0.0):

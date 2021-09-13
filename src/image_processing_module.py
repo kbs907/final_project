@@ -329,7 +329,7 @@ class ImageProcessingModule:
         self.cal_image = self.to_calibrated(self.image)
         gray = cv2.cvtColor(self.cal_image, cv2.COLOR_BGR2GRAY)
         self.blur_gray = cv2.GaussianBlur(gray,(self.blur_size, self.blur_size), 0)
-        edge_img = cv2.Canny(np.uint8(blur_gray), self.canny_low, self.canny_high)
+        edge_img = cv2.Canny(np.uint8(self.blur_gray), self.canny_low, self.canny_high)
         #cv2.imshow("canny", edge_img)
 
         # HoughLinesP : cv2.HoughLinesP(image, rho, theta, threshold, minLineLength, maxLineGap)
