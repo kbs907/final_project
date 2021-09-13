@@ -18,6 +18,14 @@ class DriveModule:
         self.pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
         pass
 
+    def slope_drive(self, angle) :
+        for i in range(20):
+            self.drive(0, 40)
+            rospy.sleep(0.1)
+        for i in range(6):
+            self.drive(-angle, -40)
+            rospy.sleep(0.1)
+
     def drive(self, angle, speed) :
         self.msg.angle = angle
         self.msg.speed = speed

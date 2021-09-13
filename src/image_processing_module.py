@@ -55,6 +55,7 @@ class ImageProcessingModule:
         self.bridge = CvBridge()
         self.image = np.empty(shape=[0])
         self.cal_image = np.empty(shape=[0])
+        self.blur_gray = np.empty(shape=[0])
         self.width, self.height = 640, 480
 
         # image preprocessing params
@@ -167,6 +168,12 @@ class ImageProcessingModule:
                         
         return False
         
+    def detect_slope(self):
+        _, baw = cv2.threshold(self.blur_gray[self.Offset : self.Offset+self.Gap, 0 : self.width], 100, 255, cv2.THRESH_BINARY)
+        if cv2.countNonZero(baw) < 7000 :
+            return True
+        return False
+
     def detect_stopline(self):
         d_lpos = max(self.lpos, 0)
         d_rpos = min(self.rpos, 640)
@@ -308,7 +315,7 @@ class ImageProcessingModule:
     def get_cte(self):
         self.cal_image = self.to_calibrated(self.image)
         gray = cv2.cvtColor(self.cal_image, cv2.COLOR_BGR2GRAY)
-        blur_gray = cv2.GaussianBlur(gray,(self.blur_size, self.blur_size), 0)
+        self.blur_gray = cv2.GaussianBlur(gray,(self.blur_size, self.blur_size), 0)
         edge_img = cv2.Canny(np.uint8(blur_gray), self.canny_low, self.canny_high)
         #cv2.imshow("canny", edge_img)
 
