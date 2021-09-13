@@ -67,7 +67,10 @@ class ImageProcessingModule:
                     [   0.     ,    0.     ,    1.     ]])
         self.dist = np.array([-0.292620, 0.068675, 0.006335, -0.002769, 0.000000])
         self.cal_mtx, self.cal_roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.width, self.height), 1, (self.width, self.height))
-        
+        self.rect = np.array([[200,300], [0,400], [640,400], [440,300]], dtype="float32")
+        self.dst = np.array([[0,0],[0,100],[640,100],[640,0]], dtype="float32")
+        self.M = cv2.getPerspectiveTransform(self.rect, self.dst)
+
         # lane parameters
         self.low_slope_threshold = 0
         self.high_slope_threshold = 10
@@ -168,6 +171,16 @@ class ImageProcessingModule:
                         
         return False
         
+    def detect_parkinglot(self) :
+        warped = cv2.warpPerspective(self.image, self.M, (640, 100))
+        gray = cv2.cvtColor(warped,cv2.COLOR_BGR2GRAY)
+        _, black = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+        search_roi = black[0:10, 640-100:]
+        num_whites = (cv2.countNonZero(search_roi))
+        if num_whites < 450 :
+            return True
+        return False
+
     def detect_slope(self):
         _, baw = cv2.threshold(self.blur_gray[self.Offset : self.Offset+self.Gap, 0 : self.width], 100, 255, cv2.THRESH_BINARY)
         if cv2.countNonZero(baw) < 7000 :

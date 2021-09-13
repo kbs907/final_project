@@ -8,3 +8,8 @@ class UltraModule:
         
     def get_data(self):
         return self.ultra_data
+
+    def right_obstacle(self):
+        if self.ultra_data[4] > 70 :
+            return False
+        return True

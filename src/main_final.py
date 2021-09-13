@@ -230,15 +230,21 @@ if __name__ == '__main__':
                 find_stopline = Ture
 
         else : 
-            if 정지선 찾아야 하면 and 정지선 보일 때 :
-                angle, speed = 0, 0
+            if find_stopline and imageProcessModule.detect_stopline() :
+                driveModule.stop_nsec(1)
                 find_stopline = False
                 find_traffic = True
-            elif 신호 찾아야하면 :
-                if 파란불 :
+            elif find_traffic :
+                if imageProcessModule.get_traffic_light('first') :
                     find_traffic = False
             else :
-                angle, speed = parallel_driving()
+                if imageProcessModule.detect_parkinglot() :
+                    driveModule.stop_nsec(1)
+                    if not ultraModule.right_obstacle() :
+                        driveModule.parallel_parking()
+                        driveModule.stop_nsec(1)
+                        print('##### finish! #####')
+                        break
         '''
         
         driveModule.drive(angle, speed)
