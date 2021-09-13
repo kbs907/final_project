@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image
 # mode 3, speed 40, offset 350 : p= 0.3, d= 0.7
 
 bridge = CvBridge()
-Offset = 350 #330
+Offset = 340 #330
 Gap = 40
 detect_line = False
 image = np.empty(shape=[0])
@@ -106,7 +106,13 @@ def divide_left_right(lines):
             	  right_lines.append([Line.tolist()])
             else :
                 right_lines.append([Line.tolist()])
-
+	
+	'''
+        if (slope < 0) and (x2 < Width/2 - 90):
+            left_lines.append([Line.tolist()])
+        elif (slope > 0) and (x1 > Width/2 + 90):
+            right_lines.append([Line.tolist()])
+	'''
     return left_lines, right_lines
 
 
@@ -191,7 +197,7 @@ def process_image(frame):
     # get center of lines
     lx1, lx2, lpos, l_avg, l_detect = get_line_pos(left_lines, left=True)
     rx1, rx2, rpos, r_avg, r_detect = get_line_pos(right_lines, right=True)
-    
+    #print('road_width : ', rpos-lpos)
     top_l = rx1-lx2
     bottom_l = rx2-lx1
     #print('top, bottop  : ', rx1-lx2, rx2-lx1)
@@ -204,14 +210,16 @@ def process_image(frame):
     else :
         if not l_detect :
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-440
+	    lpos = rpos-400
+            
         elif not r_detect :
 	    rx1, rx2 = lx2 + top_l , lx1 + bottom_l
-	    rpos = lpos+440
+	    rpos = lpos+400
+            print('lost right line')
         else :   
             lx1, lx2 = rx2 - bottom_l, rx1 - top_l
-	    lpos = rpos-400
-            detect_line = True
+	    lpos = rpos-370
+        detect_line = True
 	fail_count = 0
     
     #print('road width : ', rpos - lpos)
@@ -247,8 +255,8 @@ rate = rospy.Rate(20)
 while not image.size == (640*480*3):
         continue
 
-p_gain = 0.3 #0.25
-d_gain = 0.7 #1.7
+p_gain = 0.3#0.25
+d_gain = 0.7#1.7
 prev_cte = 0
 while not rospy.is_shutdown():
     global image
@@ -263,7 +271,8 @@ while not rospy.is_shutdown():
     if fail_count >2 :
         drive(50, 30)
     else :
-        drive(steer,40)
+        #drive(0,40)
+        drive(steer,20)
     cv2.imshow("hough", hough)
     rate.sleep()
     cv2.waitKey(1)
