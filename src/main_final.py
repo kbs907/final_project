@@ -68,8 +68,8 @@ def init():
     find_traffic = True#False #True		# 신호 찾기 on/off
     find_ar = True
     do_T_parking = False
-    do_yolo_stop = True
-    mode = '2'
+    do_yolo_stop = True#False
+    mode = '1' #'2'
     cut_in = True
     yolo_person = True
     class_name = 'person'
@@ -79,6 +79,7 @@ def init():
     rospy.Subscriber('xycar_ultrasonic', Int32MultiArray, ultra_callback)
     rospy.Subscriber('ar_pose_marker', AlvarMarkers, ar_callback)
     rospy.Subscriber('scan', LaserScan, lidar_callback)
+    rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, yolo_callback)
 
 def sensor_check():
     global imageProcessModule
@@ -110,6 +111,10 @@ def lidar_callback(data):
     global lidarModule
     lidarModule.set_lidarData(data)
 
+def yolo_callback(data):
+    global yoloModule
+    yoloModule.set_boxdata(data)
+
 if __name__ == '__main__':
     init()
     sensor_check()
@@ -138,7 +143,7 @@ if __name__ == '__main__':
         imageProcessModule.detect_stopline()
         #print ('imageProcessModule.get_corner_count', imageProcessModule.get_corner_count())
         if mode == '1' :	#시작~교차로 전
-            speed = 30
+            speed = 20 #30
             if find_traffic :
                 if not imageProcessModule.get_traffic_light('first') :
                     angle, speed = 0, 0
@@ -161,12 +166,11 @@ if __name__ == '__main__':
                     print('==============')
         
         elif mode == '2' :	# 교차로
-            yolo_size = yoloModule.get_size(class_name)
             #print('ardata : ', arModule.get_ardata())
-            find_stopline, find_traffic = False, False
+            #find_stopline, find_traffic = False, False
 
             if find_stopline :
-                speed = 25
+                speed = 15
                 if imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
                     driveModule.stop_nsec(1) # 1초 정차
                     find_stopline = False
@@ -190,11 +194,14 @@ if __name__ == '__main__':
                 else:
                     do_T_parking = driveModule.end_T_parking()
                 '''
-                do_T_parking = driveModule.end_T_parking(arModule.get_arctan())
-                do_yolo_stop = True
-    
+                driveModule.end_T_parking(arModule.get_arctan())
+                do_T_parking = False
+
             else :
+                yolo_size = yoloModule.get_size(class_name)
+                print('yolo_size: ', yolo_size)
                 if do_yolo_stop and yolo_size != None :
+                    print('***** start yolo drive *****')
                     do_yolo_stop, class_name = driveModule.yolo_drive(angle, class_name, yolo_size)
                 if not do_yolo_stop : # 교차로 진입
                     find_stopline = True
