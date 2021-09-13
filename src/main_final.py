@@ -8,7 +8,7 @@ import cv2, random, math
 
 from cv_bridge import CvBridge, CvBridgeError
 from xycar_msgs.msg import xycar_motor
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, LaserScan
 from std_msgs.msg import Int32MultiArray
 from darknet_ros_msgs.msg import BoundingBoxes
 from visualization_msgs.msg import Marker, MarkerArray
@@ -201,8 +201,8 @@ if __name__ == '__main__':
                     mode = '3'
         '''
         elif mode = '3'	# 교차로이후 ~ 언덕 전
-            if 언덕 보이면 :
-                slope_driving()	#언덕 주행
+            if imageProcessModule.detect_slope :
+                slope_drive(angle)	#언덕 주행
                 mode = '4'
 
         elif mode = '4' # 언덕이후~ 로터리전
