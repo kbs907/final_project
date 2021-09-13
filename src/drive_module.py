@@ -18,11 +18,25 @@ class DriveModule:
         self.pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
         pass
 
+    def parallel_parking(self) :
+        for _ in range(25):
+            self.drive(0,25)
+            rospy.sleep(0.1)
+        for _ in range(10):
+            self.drive(-40,25)
+            rospy.sleep(0.1)
+        for _ in range(20):
+            self.drive(0,-50)
+            rospy.sleep(0.1)
+        for _ in range(10):
+            self.drive(-35,50)
+            rospy.sleep(0.1)
+
     def slope_drive(self, angle) :
-        for i in range(20):
+        for _ in range(20):
             self.drive(0, 40)
             rospy.sleep(0.1)
-        for i in range(6):
+        for _ in range(6):
             self.drive(-angle, -40)
             rospy.sleep(0.1)
 
@@ -38,8 +52,7 @@ class DriveModule:
     
     def stop_nsec(self, stop_time) :
         start_time = time.time()
-        self.msg.angle = 0
-        self.msg.speed = 0
+        self.drive(0,0)
         
         while (time.time() <= start_time + stop_time):
             pass
