@@ -146,7 +146,7 @@ if __name__ == '__main__':
             speed = 20 #30
             if find_traffic :
                 if not imageProcessModule.get_traffic_light('first') :
-                    angle, speed = 0, 0
+                    driveModule.stop()
                 else :
                     find_traffic = False
             elif cut_in and driveModule.cut_in(imageProcessModule.get_road_width(), ultraModule.get_data()) :
@@ -177,7 +177,7 @@ if __name__ == '__main__':
                     
             elif find_traffic :
                 if not imageProcessModule.get_traffic_light('second') : 
-                    angle, speed = driveModule.stop()
+                    driveModule.stop()
                 else :
                     find_traffic = False
             

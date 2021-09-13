@@ -25,8 +25,8 @@ class DriveModule:
         print(angle, speed)
         self.pub.publish(self.msg)
        
-    def stop(self) :
-        return (0, 0)
+    def stop(self):
+        self.drive(0, 0)
     
     def stop_nsec(self, stop_time) :
         start_time = time.time()
