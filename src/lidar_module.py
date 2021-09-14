@@ -11,6 +11,11 @@ class LidarModule :
     def get_data(self) :
         return self.lidar_points
 
+    def end_rotary(self) :
+        if 0.3 < self.lidar_points[-126] < 0.48 :
+            return True
+        return False
+
     def can_rotary_in(self):
         if len([i for i in self.lidar_points[42:84] if i>0 and i<1.5]) :
             return False
