@@ -15,6 +15,28 @@ class YoloModule:
     def set_boxdata(self, boxdata):
         self.boxdata = boxdata
 
+    def car_avoid(self, lpos, rpos):
+        for i in self.boxdata.bounding_boxes :
+            if i.Class == "car" :
+                if (i.xmin+i.xmax)/2 < 320 :
+                    yolo_lpos = i.xmax
+                    yolo_rpos = 0
+                else :
+                    yolo_lpos = 0
+                    yolo_rpos = i.xmin
+                if yolo_lpos != 0:
+                    lpos = yolo_lpos+55
+                    rpos += 55
+                elif yolo_rpos != 0:
+                    rpos = yolo_rpos-55
+                    lpos -= 55
+
+        center = (lpos+rpos)/2
+        cte = center - 320
+        steer = (cte*0.4)
+
+        return steer
+
     def get_car_center(self):
         if self.boxdata is not None:
             for i in boxdata.bounding_boxes:

@@ -22,11 +22,11 @@ class DriveModule:
         self.msg.angle = angle
         self.msg.speed = speed
 
-        print(angle, speed)
+        #print(angle, speed)
         self.pub.publish(self.msg)
        
-    def stop(self):
-        self.drive(0, 0)
+    def stop(self) :
+        return (0, 0)
     
     def stop_nsec(self, stop_time) :
         start_time = time.time()
@@ -66,17 +66,35 @@ class DriveModule:
         for i in range(30):
             self.drive(degree/2, -35)
             rospy.sleep(0.1)
-        self.stop_nsec(3)
+
+    def again_T_parking(self, dist, degree):
+        print('degree', degree)
+        num = 0
+        new_degree = degree
+        
+        while abs(new_degree) >= 3:
+            if new_degree >= 0:
+                new_degree -= 1
+            else:
+                new_degree += 1
+            self.drive(new_degree, 10)
+            rospy.sleep(0.1)
+            num += 1
+
+        for i in range(num):
+            self.drive(-(degree/2), -30)
+            rospy.sleep(0.1)
 
     def end_T_parking(self, degree):
         print('***** end T parking *****')
+        self.stop_nsec(3)
         for i in range(20):
             self.drive(degree * 2, 10)
             rospy.sleep(0.1)
         for i in range(30):
             self.drive(-50, 10)
             rospy.sleep(0.1)
-        for i in range(15):
+        for i in range(20):
             self.drive(20, -35)
             rospy.sleep(0.1)
         for i in range(5):
@@ -130,9 +148,14 @@ class DriveModule:
         return do_yolo_stop, class_name
 
     def cut_in(self, road_width, ultra_msg):
-        if road_width < 300 and (ultra_msg[0] < 30 or ultra_msg[-1] < 80):
-            return True
-        return False
+        if road_width < 300 :
+            if ultra_msg[0] < 30 or ultra_msg[-1] < 80:
+                return 0, True
+            else :
+                return 20, False
+        else :
+            return 30, True
+
     
     def Hough_drive(self, cte, fail_count):
         d_term = cte - self.prev_cte
@@ -142,7 +165,7 @@ class DriveModule:
         steer = self.p_gain * cte + self.d_gain * d_term
         
         if fail_count > 2:
-            return (50, 15)
+            return (45, 15)
 	'''
         else:
             if stopline:

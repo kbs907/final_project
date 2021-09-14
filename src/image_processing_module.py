@@ -50,6 +50,9 @@ class ImageProcessingModule:
     r_existable_range = 0
     detecting_gap = 0
 
+    #stopline
+    stopline_count = 0 
+
     def __init__(self):
         # image reading setup
         self.bridge = CvBridge()
@@ -106,9 +109,12 @@ class ImageProcessingModule:
         self.Gap = 40
             
         # lane detecting range
-        self.l_existable_range = self.width/2 - 30
-        self.r_existable_range = self.width/2 + 30
-        self.detecting_gap = 25
+        self.l_existable_range = self.width/2 + 50
+        self.r_existable_range = self.width/2 - 50
+        self.detecting_gap = 30
+
+        #stopline
+        self.stopline_count = 0
         
     def set_image(self, data):
         self.image = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -116,6 +122,9 @@ class ImageProcessingModule:
     def get_image_size(self):
         return self.image.size
     
+    def get_intersec_count(self):
+        return self.intersec_count
+
     def get_corner_count(self):
         return self.corner_count
 
@@ -171,6 +180,9 @@ class ImageProcessingModule:
                         
         return False
         
+    def get_lane_pos(self) :
+        return self.lpos, self.rpos
+
     def detect_parkinglot(self) :
         warped = cv2.warpPerspective(self.image, self.M, (640, 100))
         gray = cv2.cvtColor(warped,cv2.COLOR_BGR2GRAY)
@@ -183,9 +195,10 @@ class ImageProcessingModule:
 
     def detect_slope(self):
         _, baw = cv2.threshold(self.blur_gray[self.Offset : self.Offset+self.Gap, 0 : self.width], 100, 255, cv2.THRESH_BINARY)
-        if cv2.countNonZero(baw) < 7000 :
+        if cv2.countNonZero(baw) < 10500 :
             return True
         return False
+
 
     def detect_stopline(self):
         d_lpos = max(self.lpos, 0)
@@ -204,6 +217,32 @@ class ImageProcessingModule:
                 
         return False
 
+    def detect_stopline_2(self):
+        #d_lpos = max(self.lpos, 0)
+        d_lpos = 0
+        d_rpos = min(self.rpos, 640)
+        x_len = d_rpos - d_lpos - 20
+        if d_rpos != 0 and x_len > 0:
+            stopline_roi = self.cal_image[360:390, d_lpos + 10 :d_rpos - 10]
+            stopline_image = self.stopline_image_processing(stopline_roi)
+            cv2.imshow("bin", stopline_image)
+            cNZ = cv2.countNonZero(stopline_image)
+            #print(cNZ, x_len * self.Gap * 0.25,  x_len * self.Gap * 0.3,  x_len * self.Gap * 0.4)
+            #print('cnz : ',cNZ, x_len * self.Gap * 0.1, x_len * self.Gap * 0.13, x_len * self.Gap * 0.15 ,x_len * self.Gap * 0.2)
+
+            #if cNZ > x_len * self.Gap * 0.15:
+            if cNZ > 1000:
+                if self.stopline_count > 5:
+                    #print("stopline_3333", self.stopline_count)
+                    return True
+                else:
+                    self.stopline_count += 1
+                    print("count",self.stopline_count)
+
+                
+        return False
+    
+   
     def stopline_image_processing(self, stopline_image):
         blur = cv2.GaussianBlur(stopline_image, (5, 5), 0)
         gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
@@ -360,7 +399,7 @@ class ImageProcessingModule:
         else :
             if not self.l_detect :
                 self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
-                self.lpos = self.rpos-400
+                self.lpos = self.rpos-380
                 self.l_fail_count += 1
                 self.r_fail_count = 0
                 print('l_fail_count : ', self.l_fail_count)
@@ -368,7 +407,7 @@ class ImageProcessingModule:
                     self.corner_count += 1
             elif not self.r_detect :
                 self.rx1, self.rx2 = self.lx2 + self.top_l , self.lx1 + self.bottom_l
-                self.rpos = self.lpos+400
+                self.rpos = self.lpos+380
                 self.r_fail_count += 1
                 self.l_fail_count = 0
                 print('r_fail_count : ', self.r_fail_count)
@@ -376,7 +415,7 @@ class ImageProcessingModule:
                     self.corner_count += 1
             else :   
                 self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
-                self.lpos = self.rpos-370
+                self.lpos = self.rpos-340
                 self.l_fail_count = 0
                 self.r_fail_count = 0
             self.detect_line = True
