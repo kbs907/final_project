@@ -85,6 +85,7 @@ $ roslaunch final_project final_project.launch
 ⑨ 초록불의 중심 V 값을 기준으로 ON / OFF 판단  
 
 ### 5. Lane Barge
+<img src="./image/끼어들기.gif"/>  
 ① 차선 폭이 좁아지는 지점을 끼어들기 구간으로 판단  
 ② 끼어들기 구간에 도착하면 좌측 전면 라이다와 좌측 후면 초음파로 주변 차량 판단 후 진입  
 
