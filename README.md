@@ -57,7 +57,7 @@ $ roslaunch final_project final_project.launch
 - mode 3: YOLO Mission을 수행한 후, 한쪽 차선을 잃어버려서 회전 구간으로 판단할 때 모드 3으로 변경  
 - mode 4: 경사로를 검출하면 모드 4로 변경  
 - mode 5: 정지선에서 멈춘 후, 왼쪽에 차량이 없다고 판단되면 모드 5로 변경  
-- mode 6: 로터리 회전 중 기둥이 인식되지 않으면 모드 6으로 변경  
+- mode 6: 로터리 회전 중 상자 검출 시 모드 6 변경
 - mode 7: 평행 주차를 위한 AR tag의 거리 조건으로 모드 7 변경  
 
 ### 3. Lane Detection
@@ -109,7 +109,9 @@ $ roslaunch final_project final_project.launch
 ④ 내리막길일때 정지해서 정지선을 넘어가지 않도록 주행  
 
 ### 10. Driving rotary
-① 좌측 전면 라이다 센서로 주행 중인 차량 판단 후 주행  
+① 좌측 전면 라이다 센서로 주행 중인 차량 판단  
+② 전면 라이다로 로터리에서 먼저 주행 중인 차량과 충돌 방지  
+③ 초음파 센서로 우측 상자 인식 후 로터리 주행 종료
 
 ### 11. Obstacle avoidance driving
 ① 기본적 차량 주행  
