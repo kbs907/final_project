@@ -256,6 +256,3 @@ $ roslaunch final_project final_project.launch
 ① ROI 영역을 오른쪽 차선까지 포함시키고 cv2.countNonZero 함수에서 파라미터 조절  
 ② Xycar model D에는 라이다 센서가 앞쪽에 있기 때문에 
 빈 주차 자리 인식이 어렵다고 판단하여 우측 초음파 센서로 인식
-
-## Problems & Resolution
----
