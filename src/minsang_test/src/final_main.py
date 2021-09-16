@@ -19,8 +19,8 @@ mode = -1
 imagedata = None
 ardata = None
 runHoughT = False
-runHoughS = False
-runParallel = True
+runHoughS = True
+runParallel = False
 roll, pitch, yaw = 0, 0, 0
 
 time.sleep(5)
