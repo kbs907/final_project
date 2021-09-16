@@ -1,4 +1,4 @@
-# Programmers Autonomous-Driving Dev School. Final Course Competition
+# Programmers Dev School Autonomous-Driving. Final Course Competition
 
 ## Video
 ---
