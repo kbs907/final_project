@@ -116,7 +116,7 @@ $ roslaunch final_project final_project.launch
 ③ 원 검출이 3개 이상일 때의 조건을 주고, 가장 왼쪽 원과 가장 오른쪽 원의 차이, 가장 위쪽 원과 가장 아래 쪽 원의 차이의 조건 설정한 후, 가장 오른쪽 원을 초록색으로 판단  
 ④ HSV 채널 중 V 값을 사용해서 특정값 이상일 때 불이 켜졌다고 판단
 
-### 5. Lane Barge
+### 5. Lane Change
 <img src="./image/끼어들기.gif"/>  
 
 #### Process  
