@@ -74,6 +74,8 @@ $ roslaunch final_project final_project.launch
 ⑪ PID Control을 통한 최종 Steering 제어  
 
 ### 4. Recognition traffic light
+<img src="./image/신호등.gif"/>  
+
 ① Calibration  
 ② ROI 설정  
 ③ Gaussian Blur  
@@ -95,26 +97,36 @@ $ roslaunch final_project final_project.launch
 ③ cv2.countNonZero 함수를 사용해서 0 개수 파악 후, 정지선 인식  
 
 ### 7. T parking
+<img src="./image/T.gif"/>  
+
 ① AR tag와의 distance를 기준으로 시작 위치 파악  
 ② 시작 위치에서 AR tag와의 arctan를 기준으로 후진 주차
 
 ### 8. YOLO Mission
+<img src="./image/yolo.gif"/>  
+
 ① Tiny YOLO v2 voc 모델을 사용해서 'person' class 검출  
 ② 'person' class의 크기를 판단해서 정지 후 검출할 class를 'cat'으로 변경  
 ③ 'cat' class의 크기를 판단해서 정지  
 
-### 9. Driving on a ramp
+### 9. Driving on a ramp  
+<img src="./image/경사로.gif"/>  
+
 ① 특정 범위를 ROI로 선정  
 ② cv2.countNonZero 함수를 이용해서 경사로 인식  
 ③ 경사로일때 속도를 높여서 오르막길 주행  
 ④ 내리막길일때 정지해서 정지선을 넘어가지 않도록 주행  
 
 ### 10. Driving rotary
+<img src="./image/로터리.gif"/>  
+
 ① 좌측 전면 라이다 센서로 주행 중인 차량 판단  
 ② 전면 라이다로 로터리에서 먼저 주행 중인 차량과 충돌 방지  
 ③ 초음파 센서로 우측 상자 인식 후 로터리 주행 종료
 
 ### 11. Obstacle avoidance driving
+<img src="./image/장애물.gif"/>  
+
 ① 기본적 차량 주행  
 ② YOLO로 갓길 주차되어 있는 차량 검출  
 ③ 차량이 검출된다면 차선 위치 조정해서 주행  
