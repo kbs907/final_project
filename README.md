@@ -171,7 +171,7 @@ $ roslaunch final_project final_project.launch
 <img src="./image/yolo.gif"/>  
 
 #### Process  
-① Tiny YOLO v2 voc 모델을 사용해서 'person' class 검출  
+① YOLO v2 voc 모델을 사용해서 'person' class 검출  
 ② 'person' class의 크기를 판단해서 정지 후 검출할 class를 'cat'으로 변경  
 ③ 'cat' class의 크기를 판단해서 정지  
 
@@ -254,7 +254,7 @@ $ roslaunch final_project final_project.launch
 
 #### Resolution
 ① ROI 영역을 오른쪽 차선까지 포함시키고 cv2.countNonZero 함수에서 파라미터 조절  
-② Xycar model D에는 라이다 센서가 앞쪽에 있기 때문에 
+② Xycar model D에는 라이다 센서가 앞쪽에 있기 때문에
 빈 주차 자리 인식이 어렵다고 판단하여 우측 초음파 센서로 인식
 
 ## Problems & Resolution
