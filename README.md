@@ -1,4 +1,4 @@
-# Programmers Autonomous-Driving Dev course. Mission Pass Competition
+# Programmers Autonomous-Driving Dev School. Final Course Competition
 
 ## Video
 ---
