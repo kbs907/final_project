@@ -90,7 +90,7 @@ $ roslaunch final_project final_project.launch
 ⑤ 조향을 위한 Offset 최적화 작업을 진행하고, pd 제어로 안정적인 조향각 제어
 
 
-### 4. Recognition traffic light
+### 4. Traffic Light Recognition
 <img src="./image/신호등.gif"/>  
 
 #### Process  
@@ -132,7 +132,7 @@ $ roslaunch final_project final_project.launch
 ① 차선이 좁아져서 자연스럽게 차선 변경을 해야하는 시점에 인식한 차선 폭이 좁아지는 특성과 두 차량 사이에 끼어 들어야 하는 미션 조건이 있어서 라이다를 활용해서 좌전방에 차량이 지나간다고 판단되면 진행하는 방법을 사용  
 ②, ③ 속도를 줄여 제동걸이를 줄이는 동시에 옆 차선을 침법하지 않을 정도로만 좁아지는 차선에 따라 꺾고 멈추도록 조정
 
-### 6. Recognition stop line
+### 6. Stop Line Recognition
 <img src="./image/정지선.gif"/>  
 
 #### Process  
@@ -150,7 +150,7 @@ $ roslaunch final_project final_project.launch
 ② 정지선을 판단하기 전 좌회전 혹은 우회전을 파악해서 속도를 미리 줄임  
 ③ cv2.counNonZero()의 리턴값을 count해서 일정 비율 이상일 시, 정지선으로 인식  
 
-### 7. T parking
+### 7. T-Parking
 <img src="./image/T.gif"/>  
 
 #### Process  
@@ -185,7 +185,7 @@ $ roslaunch final_project final_project.launch
 ② target 이미지마다 일정 거리 주행을 시작하는 bounding box의 일정 크기를 다르게 지정  
 ③ 정지할 때도 차선을 인식할 수 있도록 정지 코드를 시간 사용에서 count 사용으로 변경  
 
-### 9. Driving on a ramp  
+### 9. Incline Mission
 <img src="./image/경사로.gif"/>  
 
 #### Process  
@@ -204,7 +204,7 @@ $ roslaunch final_project final_project.launch
 ② 내리막길에서 일시적으로 후진 주행  
 ③ 경사로 진입 시 고정 Steering 값으로 주행  
 
-### 10. Driving rotary
+### 10. Rotary Mission
 <img src="./image/로터리.gif"/>  
 
 #### Process  
@@ -220,7 +220,7 @@ $ roslaunch final_project final_project.launch
 ① 로터리 전 정지선에서 정지 후, 좌전방에 근접한 차량이 없으면 로터리 진입  
 ② 진행 중에 속도 차이로 충돌할 수 있으므로 일정 거리 내에 근접 시 정리
 
-### 11. Obstacle avoidance driving
+### 11. Obstacle Avoidance Mission
 <img src="./image/장애물.gif"/>  
 
 #### Process  
@@ -236,7 +236,7 @@ $ roslaunch final_project final_project.launch
 ① YOLO를 사용해서 Car 검출한 후, Bounding box의 edge로 장애물 차량 판단 및 차선 위치 재설정  
 ② Bounding box가 생길 때마다 edge 위치에 가중치 값을 더해줌  
 
-### 12. Parallel parking
+### 12. Parallel Parking Mission
 <img src="./image/평행주차.gif"/>  
 
 #### Process  
