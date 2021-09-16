@@ -22,6 +22,7 @@
 Project2
   └─ src
   │    └─ main_final.py                 # xycar control main code
+  │    └─ change_mission.py             # mission change file
   │    └─ drive_module.py               # xycar steering, speed control module
   │    └─ image_processing_module.py    # image processing Module
   │    └─ ar_module.py                  # AR tag control module
@@ -36,6 +37,7 @@ Project2
 ---
 ~~~bash
 $ roslaunch final_project final_project.launch
+$ rosrun final_project change_mission.py
 ~~~
 
 ## Procedure
@@ -52,6 +54,7 @@ $ roslaunch final_project final_project.launch
 - mode 7: 정지선 인식, 신호등 인식, 평행 주차  
 
 ### 2. Change mode  
+- change_mission.py: mission 토픽을 전송해서 mission 변경(mode와 flag global 변수 변경)
 - mode 1: default  
 - mode 2: 끼어들기 후, 한쪽 차선을 잃어버려서 회전 구간으로 판단하면 모드 2로 변경  
 - mode 3: YOLO Mission을 수행한 후, 한쪽 차선을 잃어버려서 회전 구간으로 판단할 때 모드 3으로 변경  
