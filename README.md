@@ -181,7 +181,7 @@ $ roslaunch final_project final_project.launch
 ③ 미션 구간에서 정지 한 후, 다시 주행할 때 차선을 잃어버림  
 
 #### Resolution
-① YOLO에서 검출된 bounding box의 길이(xmin, xmax) 차이가 일정 크기 이상일 때 일정 거리 주행 후 주차
+① YOLO에서 검출된 bounding box의 길이(xmin, xmax) 차이가 일정 크기 이상일 때 일정 거리 주행 후 주차  
 ② target 이미지마다 일정 거리 주행을 시작하는 bounding box의 일정 크기를 다르게 지정  
 ③ 정지할 때도 차선을 인식할 수 있도록 정지 코드를 시간 사용에서 count 사용으로 변경  
 
