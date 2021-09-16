@@ -16,13 +16,19 @@ class LidarModule :
             return True
         return False
 
+    def cut_in_check(self) :
+        print(len([i for i in self.lidar_points[:63] if 0.3 < i < 0.9]))
+        if len([i for i in self.lidar_points[:42] if 0.3 < i < 0.9]) :
+           return 20, False
+        return 0, True
+
     def can_rotary_in(self):
-        if len([i for i in self.lidar_points[42:84] if i>0 and i<1.5]) :
+        if len([i for i in self.lidar_points[42:84] if 0 < i<1.5]) :
             return False
         return True
 
     def forward_obstacle(self):
-        if len([i for i in self.lidar_points[-63:]+self.lidar_points[:63] if i>0 and i<0.3]) :
+        if len([i for i in self.lidar_points[-63:]+self.lidar_points[:63] if 0 < i<0.3]) :
             return True
         return False
 

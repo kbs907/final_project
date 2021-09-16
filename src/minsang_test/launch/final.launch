@@ -21,14 +21,7 @@
     <remap from="camera_image"  to="/usb_cam/image_raw" />
     <remap from="camera_info"   to="/usb_cam/camera_info" />
   </node>
-  
-  <node pkg="xycar_imu" type="9dof_imu_node.py" name="xycar_imu" output="screen">
-    <param name="rviz_mode" type="string" value="false" />
-    <param name="port" type="string" value="/dev/ttyIMU" />
-    <param name="frame_id" type="string" value="imu" />
-    <param name="topic" type="string" value="imu" />
-  </node>
-  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic_noviewer.launch"/>
+
     <node name="xycar_lidar" pkg="xycar_lidar" type="xycar_ydlidar" output="screen" respawn="false" >
       <param name="port"         type="string" value="/dev/ttyLIDAR"/>  
       <param name="baudrate"         type="int" value="230400"/>  

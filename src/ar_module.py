@@ -46,13 +46,13 @@ class ArModule():
         return math.sqrt(pow(self.arData["DX"], 2) + pow(self.arData["DZ"], 2))
 
     def is_ar(self):
-       if self.get_id() == 0 and self.get_distance() < 0.65 :
+       if self.get_id() == 0 and 0< self.get_distance() < 0.65 :
            return True
            
        return False
        
     def finish_T_parking(self):
-        if self.get_distance() >= 0.79 and abs(self.get_yaw()) < 0.01:
-            return False
+        if self.get_distance() >= 0.76 and self.get_distance() <= 0.85 and abs(self.get_arctan()) < 10:
+            return True
 
         return False

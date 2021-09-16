@@ -187,9 +187,15 @@ class ImageProcessingModule:
         warped = cv2.warpPerspective(self.image, self.M, (640, 100))
         gray = cv2.cvtColor(warped,cv2.COLOR_BGR2GRAY)
         _, black = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-        search_roi = black[0:10, 640-100:]
+        search_roi = black[70:81, 640-100:]
+        search_roi2 = black[:, 640-100:]
+        cv2.imshow('bl', black)
+        cv2.imshow('roi', search_roi)
+        cv2.imshow('roi2', search_roi2)
+        cv2.waitKey(1)
         num_whites = (cv2.countNonZero(search_roi))
-        if num_whites < 450 :
+        print("num_whites=",num_whites)
+        if num_whites < 800 :
             return True
         return False
 
@@ -225,7 +231,7 @@ class ImageProcessingModule:
         if d_rpos != 0 and x_len > 0:
             stopline_roi = self.cal_image[360:390, d_lpos + 10 :d_rpos - 10]
             stopline_image = self.stopline_image_processing(stopline_roi)
-            cv2.imshow("bin", stopline_image)
+            #cv2.imshow("bin", stopline_image)
             cNZ = cv2.countNonZero(stopline_image)
             #print(cNZ, x_len * self.Gap * 0.25,  x_len * self.Gap * 0.3,  x_len * self.Gap * 0.4)
             #print('cnz : ',cNZ, x_len * self.Gap * 0.1, x_len * self.Gap * 0.13, x_len * self.Gap * 0.15 ,x_len * self.Gap * 0.2)
@@ -233,11 +239,12 @@ class ImageProcessingModule:
             #if cNZ > x_len * self.Gap * 0.15:
             if cNZ > 1000:
                 if self.stopline_count > 5:
+                    print("check")
                     #print("stopline_3333", self.stopline_count)
                     return True
                 else:
                     self.stopline_count += 1
-                    print("count",self.stopline_count)
+                    print("stopline_count",self.stopline_count)
 
                 
         return False
@@ -304,13 +311,13 @@ class ImageProcessingModule:
             x_m = (x1 + x2)/2
             
             if (slope < 0) and (x2 < self.l_existable_range):
-                if self.l_detect :
+                if self.detect_line :
                     if (self.l_avg - self.detecting_gap < x_m) and (x_m < self.l_avg + self.detecting_gap):
                         left_lines.append([Line.tolist()])
                 else :
                     left_lines.append([Line.tolist()])
             elif (slope > 0) and (x1 > self.r_existable_range):
-                if self.r_detect :
+                if self.detect_line :
                     if (self.r_avg - self.detecting_gap < x_m) and (x_m < self.r_avg + self.detecting_gap):
                         right_lines.append([Line.tolist()])
                 else :

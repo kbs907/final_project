@@ -221,6 +221,8 @@ def process_image(frame):
     edge_img = cv2.Canny(np.uint8(blur_gray), low_threshold, high_threshold)
     roi = edge_img[Offset : Offset+Gap, 0 : Width]
     _, baw = cv2.threshold(blur_gray[Offset : Offset+Gap, 0 : Width], 100, 255, cv2.THRESH_BINARY)
+    cv2.imshow("b", baw)
+    cv2.waitKey(0)
     white_count = (cv2.countNonZero(baw))
     all_lines = cv2.HoughLinesP(roi,1,math.pi/180,30,30,10) # 10, 10 , 50
 

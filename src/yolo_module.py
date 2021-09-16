@@ -9,12 +9,15 @@ class YoloModule:
     yolo_stop_size = 0
 
     def __init__(self):
-        self.boxdata = None
+        self.boxdata = BoundingBoxes()
         self.yolo_stop_size = 110
 
     def set_boxdata(self, boxdata):
         self.boxdata = boxdata
-
+    
+    def get_data(self) :
+        return self.boxdata
+    
     def car_avoid(self, lpos, rpos):
         for i in self.boxdata.bounding_boxes :
             if i.Class == "car" :
@@ -25,11 +28,11 @@ class YoloModule:
                     yolo_lpos = 0
                     yolo_rpos = i.xmin
                 if yolo_lpos != 0:
-                    lpos = yolo_lpos+55
-                    rpos += 55
+                    lpos = yolo_lpos+60
+                    rpos += 60
                 elif yolo_rpos != 0:
-                    rpos = yolo_rpos-55
-                    lpos -= 55
+                    rpos = yolo_rpos-60
+                    lpos -= 60
 
         center = (lpos+rpos)/2
         cte = center - 320
@@ -68,7 +71,7 @@ class YoloModule:
     def get_size(self, class_name):
         if self.boxdata is not None:
             for i in self.boxdata.bounding_boxes:
-                print(i)
+                #print(i)
                 if i.Class == class_name :
                     #print(class_name, i.xmin, i.xmax)
                     yolo_size = i.xmax - i.xmin
