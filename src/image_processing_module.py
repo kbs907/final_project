@@ -189,13 +189,12 @@ class ImageProcessingModule:
         _, black = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
         search_roi = black[70:81, 640-100:]
         search_roi2 = black[:, 640-100:]
-        cv2.imshow('bl', black)
-        cv2.imshow('roi', search_roi)
-        cv2.imshow('roi2', search_roi2)
-        cv2.waitKey(1)
+        #cv2.imshow('bl', black)
+        #cv2.imshow('roi', search_roi)
+        #cv2.imshow('roi2', search_roi2)
+        #cv2.waitKey(1)
         num_whites = (cv2.countNonZero(search_roi))
-        print("num_whites=",num_whites)
-        if num_whites < 800 :
+        if num_whites < 750 :
             return True
         return False
 
@@ -218,7 +217,7 @@ class ImageProcessingModule:
             #print(cNZ, x_len * self.Gap * 0.25,  x_len * self.Gap * 0.3,  x_len * self.Gap * 0.4)
             #print('cnz : ', cNZ, x_len * self.Gap * 0.2)
             if cNZ > x_len * self.Gap * 0.2 :
-                print("stopline")
+                #print("stopline")
                 return True
                 
         return False
@@ -239,12 +238,12 @@ class ImageProcessingModule:
             #if cNZ > x_len * self.Gap * 0.15:
             if cNZ > 1000:
                 if self.stopline_count > 5:
-                    print("check")
+                    #print("check")
                     #print("stopline_3333", self.stopline_count)
                     return True
                 else:
                     self.stopline_count += 1
-                    print("stopline_count",self.stopline_count)
+                    #print("stopline_count",self.stopline_count)
 
                 
         return False
@@ -392,14 +391,13 @@ class ImageProcessingModule:
         self.lx1, self.lx2, self.lpos, self.l_avg, self.l_detect = self.get_line_pos(left_lines, left=True)
         self.rx1, self.rx2, self.rpos, self.r_avg, self.r_detect = self.get_line_pos(right_lines, right=True)
 
-        self.road_width = self.rpos - self.lpos
-        #print('road_width : ' , self.road_width)        
+        self.road_width = self.rpos - self.lpos      
         self.top_l = self.rx1-self.lx2
         self.bottom_l = self.rx2-self.lx1
         if not self.l_detect and not self.r_detect :
             self.fail_count += 1
             if self.fail_count == 3 :
-                print('##########fail detecting line! :', self.fail_count, '##########')
+                #print('##########fail detecting line! :', self.fail_count, '##########')
                 self.dir_count = (self.dir_count + 1) % 4 
                 self.intersec_count += 1
             self.detect_line = False
@@ -409,7 +407,7 @@ class ImageProcessingModule:
                 self.lpos = self.rpos-380
                 self.l_fail_count += 1
                 self.r_fail_count = 0
-                print('l_fail_count : ', self.l_fail_count)
+                #print('l_fail_count : ', self.l_fail_count)
                 if self.l_fail_count == 20 :
                     self.corner_count += 1
             elif not self.r_detect :
@@ -417,12 +415,14 @@ class ImageProcessingModule:
                 self.rpos = self.lpos+380
                 self.r_fail_count += 1
                 self.l_fail_count = 0
-                print('r_fail_count : ', self.r_fail_count)
+                #print('r_fail_count : ', self.r_fail_count)
                 if self.r_fail_count == 20 :
                     self.corner_count += 1
             else :   
-                self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
-                self.lpos = self.rpos-340
+                if self.road_width < 400 :
+                    self.lx1, self.lx2 = self.rx2 - self.bottom_l, self.rx1 - self.top_l
+                    self.lpos = self.rpos-340
+
                 self.l_fail_count = 0
                 self.r_fail_count = 0
             self.detect_line = True

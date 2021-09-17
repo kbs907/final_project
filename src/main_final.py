@@ -9,7 +9,7 @@ import cv2, random, math
 from cv_bridge import CvBridge, CvBridgeError
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image, LaserScan
-from std_msgs.msg import Int32MultiArray
+from std_msgs.msg import Int32MultiArray, String
 from darknet_ros_msgs.msg import BoundingBoxes
 from visualization_msgs.msg import Marker, MarkerArray
 from ar_track_alvar_msgs.msg import AlvarMarkers
@@ -70,7 +70,7 @@ def init():
     find_ar = True
     do_T_parking = False
     do_yolo_stop = False
-    mode = '7'
+    mode = '1'
     cut_in = True
     cut_in2 = True
     yolo_person = True
@@ -82,6 +82,7 @@ def init():
     rospy.Subscriber('ar_pose_marker', AlvarMarkers, ar_callback)
     rospy.Subscriber('scan', LaserScan, lidar_callback)
     rospy.Subscriber("/darknet_ros/bounding_boxes", BoundingBoxes, yolo_callback)
+    rospy.Subscriber("mission", String, mission_callback)
 
 def sensor_check():
     global imageProcessModule
@@ -119,7 +120,84 @@ def yolo_callback(data):
     global yoloModule
     yoloModule.set_boxdata(data)
 
+def mission_callback(data):
+    global find_stopline
+    global find_traffic
+    global find_ar
+    global do_T_parking
+    global do_yolo_stop
+    global mode
+    global cut_in, cut_in2
+    global drive_count
+    
+    mission = data.data
+    
+    if mission == "1":
+        print('==============')
+        print('=   mode 1   =')
+        print('==============')
+
+        mode = '1'
+        find_traffic = False
+        cut_in = True
+        cut_in2 = True
+    elif mission == "2":
+        print('==============')
+        print('=   mode 2   =')
+        print('==============')
+
+        mode = '2'
+        find_stopline = True
+        find_traffic = True
+    elif mission == "3":
+        print('==============')
+        print('=   mode 3   =')
+        print('==============')
+        
+        mode = '2'
+        find_stopline = False
+        find_traffic = False
+        find_ar = False
+        do_T_parking = False
+        do_yolo_stop = True
+
+    elif mission == "4":
+        print('==============')
+        print('=   mode 3   =')
+        print('==============')
+        find_stopline = True
+        mode = '3'
+        
+    elif mission == "5":
+        print('==============')
+        print('=   mode 4   =')
+        print('==============')
+
+        mode = '4'
+        find_stopline = True
+
+    elif mission == "6":
+        print('==============')
+        print('=   mode 7   =')
+        print('==============')
+
+        mode = '7'
+        find_stopline = True
+
+    elif mission == "7":
+        print('==============')
+        print('=   mode 7   =')
+        print('==============')
+
+        mode = '7'
+        find_stopline = False
+        find_traffic = False
+        drive_count = 80
+
+
+
 if __name__ == '__main__':
+    rospy.sleep(10)
     init()
     sensor_check()
 
@@ -143,7 +221,7 @@ if __name__ == '__main__':
         global class_name
         global drive_count
 
-        print("MODE: " + mode)
+        #print("MODE: " + mode)
 
         cte, fail_count = imageProcessModule.get_cte()
         #print("failcount = ", fail_count)
@@ -180,6 +258,7 @@ if __name__ == '__main__':
             speed = 15
             if find_stopline :
                 if imageProcessModule.detect_stopline() :	# 정지선 찾아야 할 때
+                    #print("stopline")
                     driveModule.stop_nsec(1) # 1초 정차
                     find_stopline = False
                     
@@ -191,12 +270,13 @@ if __name__ == '__main__':
             
             elif find_ar :
                 if arModule.is_ar():
-                    print(arModule.get_distance())
                     find_ar = False
                     do_T_parking = True
             
             elif do_T_parking:
+                print("start T parking")
                 driveModule.start_T_parking()
+                print("do T Parking")
                 driveModule.T_parking(arModule.get_distance(), arModule.get_arctan())
 
                 '''
@@ -205,7 +285,9 @@ if __name__ == '__main__':
                         print('again T parking')
                         driveModule.again_T_parking(arModule.get_distance(), arModule.get_arctan())
                 '''
+
                 driveModule.end_T_parking(arModule.get_arctan())
+                print("end T parking")
                 do_T_parking = False
                 do_yolo_stop = True
                 intersec = imageProcessModule.get_corner_count()
@@ -217,6 +299,9 @@ if __name__ == '__main__':
                 if do_yolo_stop and yolo_size != None :
                     do_yolo_stop, class_name = driveModule.yolo_drive(angle, class_name, yolo_size)
                 if not do_yolo_stop and imageProcessModule.get_corner_count() - intersec > 2 : # 교차로 진입
+                    print('==============')
+                    print('=   mode 3   =')
+                    print('==============')
                     find_stopline = True
                     mode = '3'
         
@@ -224,6 +309,10 @@ if __name__ == '__main__':
             speed = 18
             if imageProcessModule.detect_slope() :
                 driveModule.slope_drive(angle)	#언덕 주행
+                
+                print('==============')
+                print('=   mode 4   =')
+                print('==============')
                 mode = '4'
 
         elif mode == '4' : # 언덕이후~ 로터리전
@@ -235,6 +324,9 @@ if __name__ == '__main__':
                     print('stopline!')
             else :
                 if lidarModule.can_rotary_in() :  #로터리 진입 가능하면
+                    print('==============')
+                    print('=   mode 5   =')
+                    print('==============')
                     mode = '5'
                 else :
                     speed = 0
@@ -242,22 +334,37 @@ if __name__ == '__main__':
         elif mode == '5' : # 로터리
             if lidarModule.forward_obstacle() :
                 speed = 0
-            print(lidarModule.get_data())
+
             if lidarModule.end_rotary() : # 주차 ar태그 pose로 판단 또는 차선으로
+                print('==============')
+                print('=   mode 6   =')
+                print('==============')
                 mode = '6'
         
         elif mode == '6' : # 장애물 회피
             speed = 10
             lpos, rpos = imageProcessModule.get_lane_pos()
+            '''
+            if yolo_first_car:
+                car_pose = yoloModule.car_pose()
+            else:
+                car_pose = "None"
+
+            angle = yoloModule.car_avoid(lpos, rpos, car_pose)
+            '''
             angle = yoloModule.car_avoid(lpos, rpos)
-            print(arModule.get_distance())
-            if 1.3 < arModule.get_distance() < 1.7 : # ex) 주차 ar태그 pose로 판단
+
+            if 0.1 < arModule.get_distance() < 0.5 : # ex) 주차 ar태그 pose로 판단
+                print('==============')
+                print('=   mode 7   =')
+                print('==============')
                 mode = '7'
                 find_stopline = True
 
         else : 
             if find_stopline :
                 if imageProcessModule.detect_stopline_2() :
+                    print("stopline")
                     driveModule.stop_nsec(1)
                     find_stopline = False
                     find_traffic = True
@@ -269,19 +376,21 @@ if __name__ == '__main__':
                     find_traffic = False
 
             elif not find_traffic:
-                #print('1cho gagi')
-                if drive_count < 80 :
-                    print(drive_count)
+                if drive_count < 90 :
+                    #print(drive_count)
                     drive_count += 1
                 
                 elif imageProcessModule.detect_parkinglot() :
                     print('detect parkinglot')
-                    speed =10
+                    speed = 10
                     driveModule.stop_nsec(1)
+                    for _ in range(5):
+                        driveModule.drive(0, 15)
+                        rospy.sleep(0.1)
                     if not ultraModule.right_obstacle() :
                         driveModule.parallel_parking()
                         driveModule.stop_nsec(1)
                         print('##### finish! #####')
                         break
-        print('speed : ', speed)
+
         driveModule.drive(angle, speed)

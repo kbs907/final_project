@@ -17,7 +17,38 @@ class YoloModule:
     
     def get_data(self) :
         return self.boxdata
-    
+    '''
+    def car_avoid(self, lpos, rpos, car_pose):
+        for i in self.boxdata.bounding_boxes :
+            if i.Class == "car" :
+                if (i.xmin+i.xmax)/2 < 320 :
+                    yolo_lpos = i.xmax
+                    yolo_rpos = 0
+                else :
+                    yolo_lpos = 0
+                    yolo_rpos = i.xmin
+                    
+                if yolo_lpos != 0:
+                    if car_pose == 'left':
+                        lpos = yolo_lpos+60
+                        rpos += 60
+                    elif car_pose == 'right':
+                        lpos = yolo_lpos+60
+                        rpos += 60
+                elif yolo_rpos != 0:
+                    if car_pose == 'left':
+                        rpos = yolo_rpos-60
+                        lpos -= 60
+                    elif car_pose == 'right':
+                        rpos = yolo_rpos-60
+                        lpos -= 60
+
+        center = (lpos+rpos)/2
+        cte = center - 320
+        steer = (cte*0.4)
+
+        return steer
+    '''
     def car_avoid(self, lpos, rpos):
         for i in self.boxdata.bounding_boxes :
             if i.Class == "car" :
@@ -27,6 +58,7 @@ class YoloModule:
                 else :
                     yolo_lpos = 0
                     yolo_rpos = i.xmin
+                    
                 if yolo_lpos != 0:
                     lpos = yolo_lpos+60
                     rpos += 60
@@ -40,6 +72,14 @@ class YoloModule:
 
         return steer
 
+    def car_pose(self):
+        for i in self.boxdata.bounding_boxes :
+            if i.Class == "car" :
+                if (i.xmin+i.xmax)/2 < 320 :
+                    return "left"
+                else:
+                    return "right"
+                    
     def get_car_center(self):
         if self.boxdata is not None:
             for i in boxdata.bounding_boxes:
