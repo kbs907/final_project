@@ -50,6 +50,7 @@ class YoloModule:
         return steer
     '''
     def car_avoid(self, lpos, rpos):
+        avoid_count = 70
         for i in self.boxdata.bounding_boxes :
             if i.Class == "car" :
                 if (i.xmin+i.xmax)/2 < 320 :
@@ -60,11 +61,11 @@ class YoloModule:
                     yolo_rpos = i.xmin
                     
                 if yolo_lpos != 0:
-                    lpos = yolo_lpos+60
-                    rpos += 60
+                    lpos = yolo_lpos+avoid_count
+                    rpos += avoid_count
                 elif yolo_rpos != 0:
-                    rpos = yolo_rpos-60
-                    lpos -= 60
+                    rpos = yolo_rpos-80
+                    lpos -= 80
 
         center = (lpos+rpos)/2
         cte = center - 320

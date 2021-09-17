@@ -391,7 +391,8 @@ class ImageProcessingModule:
         self.lx1, self.lx2, self.lpos, self.l_avg, self.l_detect = self.get_line_pos(left_lines, left=True)
         self.rx1, self.rx2, self.rpos, self.r_avg, self.r_detect = self.get_line_pos(right_lines, right=True)
 
-        self.road_width = self.rpos - self.lpos      
+        self.road_width = self.rpos - self.lpos
+        #print('road_width : ' , self.road_width)        
         self.top_l = self.rx1-self.lx2
         self.bottom_l = self.rx2-self.lx1
         if not self.l_detect and not self.r_detect :
