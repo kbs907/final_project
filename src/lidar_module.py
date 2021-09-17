@@ -17,7 +17,6 @@ class LidarModule :
         return False
 
     def cut_in_check(self) :
-        print(len([i for i in self.lidar_points[:63] if 0.3 < i < 0.9]))
         if len([i for i in self.lidar_points[:42] if 0.3 < i < 0.9]) :
            return 20, False
         return 0, True

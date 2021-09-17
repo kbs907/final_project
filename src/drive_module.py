@@ -22,7 +22,6 @@ class DriveModule:
         self.msg.angle = angle
         self.msg.speed = speed
 
-        #print(angle, speed)
         self.pub.publish(self.msg)
        
     def stop(self) :
@@ -36,21 +35,20 @@ class DriveModule:
             pass
     
     def slope_drive(self, angle) :
-        for _ in range(20):
+        for _ in range(17): #20
             self.drive(0, 40)
             rospy.sleep(0.1)
         for _ in range(6):
-            self.drive(-angle, -40)
+            self.drive(angle, -40) #-angle
             rospy.sleep(0.1)
             
     def start_T_parking(self):
-        print('***** start T parking *****')
-        for i in range(13): # motor change
+        for i in range(15): # motor change
             self.drive(-5, 10)
             rospy.sleep(0.1)
             
-        for i in range(35): #17
-            self.drive(45, 10) #50,10
+        for i in range(30): #17
+            self.drive(50, 10) #50,10
             rospy.sleep(0.1)
 
         for i in range(10):
@@ -58,17 +56,14 @@ class DriveModule:
             rospy.sleep(0.1)
 
     def T_parking(self, dist, degree):
-        print('degree', degree)
-        
-        for i in range(35):
-            self.drive(-(degree*5), -35)
+        for i in range(30):
+            self.drive(-(degree*2), -35)
             rospy.sleep(0.1)
-        for i in range(33):
-            self.drive(degree/1.5, -35)
+        for i in range(30):
+            self.drive(degree/2, -35)
             rospy.sleep(0.1)
 
     def again_T_parking(self, dist, degree):
-        print('degree', degree)
         num = 0
         new_degree = degree
         
@@ -86,9 +81,8 @@ class DriveModule:
             rospy.sleep(0.1)
 
     def end_T_parking(self, degree):
-        print('***** end T parking *****')
         self.stop_nsec(3)
-        for i in range(30):
+        for i in range(20):
             self.drive(degree * 2, 10)
             rospy.sleep(0.1)
         for i in range(30):
@@ -105,17 +99,17 @@ class DriveModule:
             rospy.sleep(0.1)
 
     def parallel_parking(self) :
-        for _ in range(25):
+        for _ in range(17): #22
             self.drive(0,15)
             rospy.sleep(0.1)
         for _ in range(10):
             self.drive(-40,15)
             rospy.sleep(0.1)
-        for _ in range(20):
+        for _ in range(20): #22
             self.drive(0,-50)
             rospy.sleep(0.1)
         for _ in range(10):
-            self.drive(-35,-50)
+            self.drive(-30,-40)
             rospy.sleep(0.1)
 
     def yolo_drive(self, angle, class_name, yolo_size):
@@ -128,19 +122,16 @@ class DriveModule:
             yolo_count = 20 #21 #18
 
         if  yolo_size < yolo_stop_size:
-            print("YOLO")
             self.drive(angle, 15)
         elif yolo_size >= yolo_stop_size:
             for _ in range(yolo_count):
-                #print(c_s, yolo_size, "dd")
                 self.drive(angle, 12)
                 rospy.sleep(0.05)
 
-            print('find ', class_name)
-            for _ in range(50):
+            for _ in range(100):
                 self.drive(angle,0)
                 rospy.sleep(0.05)
-            print("Stop")
+
             if class_name == 'person':
                 class_name = 'cat'
                 do_yolo_stop = True
@@ -167,12 +158,5 @@ class DriveModule:
                 return (50, 15)
         except:
             pass
-	'''
-        else:
-            if stopline:
-            		print('stopline!')
-               
-            		for _ in range(60):
-              			return (steer, 0)
-        '''
+
         return (steer, 15)
