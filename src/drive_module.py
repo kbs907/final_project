@@ -43,7 +43,7 @@ class DriveModule:
             rospy.sleep(0.1)
             
     def start_T_parking(self):
-        for i in range(15): # motor change
+        for i in range(13): # motor change
             self.drive(-5, 10)
             rospy.sleep(0.1)
             
@@ -56,7 +56,7 @@ class DriveModule:
             rospy.sleep(0.1)
 
     def T_parking(self, dist, degree):
-        for i in range(30):
+        for i in range(37): #35
             self.drive(-(degree*2), -35)
             rospy.sleep(0.1)
         for i in range(30):
@@ -82,10 +82,10 @@ class DriveModule:
 
     def end_T_parking(self, degree):
         self.stop_nsec(3)
-        for i in range(20):
+        for i in range(30):
             self.drive(degree * 2, 10)
             rospy.sleep(0.1)
-        for i in range(30):
+        for i in range(30): #30
             self.drive(-50, 10)
             rospy.sleep(0.1)
         for i in range(20):
@@ -133,9 +133,11 @@ class DriveModule:
                 rospy.sleep(0.05)
 
             if class_name == 'person':
+                print('detect person')
                 class_name = 'cat'
                 do_yolo_stop = True
             else:
+                print('detect cat')
                 do_yolo_stop = False
 
         return do_yolo_stop, class_name
